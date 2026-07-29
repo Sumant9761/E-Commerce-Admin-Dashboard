@@ -1,6 +1,5 @@
 import { Button } from "@mui/material";
-import React, { useState } from "react";
-import { RiMenu2Line } from "react-icons/ri";
+import React, { useContext, useState } from "react";
 import { FaRegBell } from "react-icons/fa";
 import Badge from "@mui/material/Badge";
 import { styled } from "@mui/material/styles";
@@ -10,7 +9,9 @@ import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
 import { FaRegUser } from "react-icons/fa";
 import { IoIosLogOut } from "react-icons/io";
-
+import { HiOutlineMenuAlt2 } from "react-icons/hi";
+import { FcMenu } from "react-icons/fc";
+import { MyContext } from "../../App";
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
   "& .MuiBadge-badge": {
@@ -31,11 +32,23 @@ const Header = () => {
     setAnchorMyAcc(null);
   };
 
+  const context = useContext(MyContext);
+
   return (
-    <header className="w-full h-[auto] py-2 pl-64 pr-7 shadow-md bg-[#fff] flex items-center justify-between">
+    <header
+      className={`w-full h-[auto] py-2 ${context.isSidebarOpen === true ? "pl-64" : "pl-5"} pr-7 shadow-md 
+    bg-[#fff] flex items-center justify-between transition-all`}
+    >
       <div className="part1">
-        <Button className="!w-[40px] !h-[40px] !rounded-full !min-w-[40px] !text-[rgba(0,0,0,0.8)]">
-          <RiMenu2Line className="text-[18px] text-[rgba(0,0,0,0.8)]" />
+        <Button
+          className="!w-[40px] !h-[40px] !rounded-full !min-w-[40px] !text-[rgba(0,0,0,0.8)]"
+          onClick={() => context.setIsSidebarOpen(!context.isSidebarOpen)}
+        >
+          {context.isSidebarOpen === true ? (
+            <HiOutlineMenuAlt2 className="text-[20px] text-[rgba(0,0,0,0.8)]" />
+          ) : (
+            <FcMenu className="text-[20px] text-[rgba(0,0,0,0.8)]" />
+          )}
         </Button>
       </div>
 
@@ -119,13 +132,15 @@ const Header = () => {
               onClick={handleCloseMyAcc}
               className="flex items-center gap-3"
             >
-              <FaRegUser className="text-[16px]" /> <span className="text-[14px]">Profile</span>
+              <FaRegUser className="text-[16px]" />{" "}
+              <span className="text-[14px]">Profile</span>
             </MenuItem>
             <MenuItem
               onClick={handleCloseMyAcc}
               className="flex items-center gap-3"
             >
-              <IoIosLogOut className="text-[18px]" /> <span className="text-[14px]">Sign Out</span>
+              <IoIosLogOut className="text-[18px]" />{" "}
+              <span className="text-[14px]">Sign Out</span>
             </MenuItem>
           </Menu>
         </div>

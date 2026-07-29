@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { createContext, useState } from "react";
 import "./App.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Dashboard from "./Pages/Dashboard";
 import Header from "./Components/Header";
 import Sidebar from "./Components/Sidebar";
 
+const MyContext = createContext();
+
 function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   const router = createBrowserRouter([
     {
       path: "/",
@@ -14,8 +18,11 @@ function App() {
           <section className="main">
             <Header />
             <div className="contentMain flex">
-              <div className="sidebarWrapper w-[16%]">
+              <div className={`overflow-hidden sidebarWrapper ${isSidebarOpen===true ? 'w-[16%]' : 'w-[0px] opacity-0'} transition-all`}>
                 <Sidebar />
+              </div>
+              <div className={`contentRight py-4 px-5 ${isSidebarOpen===false ? 'w-[100%]' : 'w-[84%]'} transition-all`}>
+                <Dashboard />
               </div>
             </div>
           </section>
@@ -24,11 +31,21 @@ function App() {
     },
   ]);
 
+  const values = {
+    isSidebarOpen,
+    setIsSidebarOpen
+  };
+
+
   return (
     <>
-      <RouterProvider router={router} />
+      <MyContext.Provider value={values}>
+        <RouterProvider router={router} />
+      </MyContext.Provider>
     </>
   );
 }
 
 export default App;
+export {MyContext};
+
