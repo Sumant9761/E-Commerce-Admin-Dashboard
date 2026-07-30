@@ -1,4 +1,4 @@
-import React, { useState, PureComponent } from "react";
+import React, { useState, PureComponent, useContext } from "react";
 import DashboardBoxes from "../../Components/DashboardBoxes";
 import { Button } from "@mui/material";
 import { FaPlus } from "react-icons/fa";
@@ -32,6 +32,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { MyContext } from "../../App";
 
 const label = { slotProps: { input: { "aria-label": "Checkbox demo" } } };
 
@@ -52,6 +53,8 @@ function createData(name, code, population, size) {
 const Dashboard = () => {
   const [isOpenOrderedProduct, setIsOpenOrderedProduct] = useState(null);
 
+  const context = useContext(MyContext);
+
   const isShowOrderedProduct = (index) => {
     if (isOpenOrderedProduct === index) {
       setIsOpenOrderedProduct(null);
@@ -60,7 +63,7 @@ const Dashboard = () => {
     }
   };
 
-  const [page, setPage] = React.useState(0);
+  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [categoryFilterVal, setCategoryFilterVal] = useState("");
   const [chart1Data, setChart1Data] = useState([
@@ -164,7 +167,15 @@ const Dashboard = () => {
           </p>
 
           <br />
-          <Button className="btn-blue !capitalize">
+          <Button
+            className="btn-blue !capitalize gap-1"
+            onClick={() =>
+              context.setIsOpenFullScreenPanel({
+                open: true,
+                model: "Add Product",
+              })
+            }
+          >
             <FaPlus />
             Add Product
           </Button>
@@ -208,7 +219,17 @@ const Dashboard = () => {
             <Button className="btn !bg-green-600 !text-white btn-sm">
               Export
             </Button>
-            <Button className="btn-blue !text-white btn-sm">Add Product</Button>
+            <Button
+              className="btn-blue !text-white btn-sm"
+              onClick={() =>
+                context.setIsOpenFullScreenPanel({
+                  open: true,
+                  model: "Add Product",
+                })
+              }
+            >
+              Add Product
+            </Button>
           </div>
         </div>
 
@@ -628,7 +649,17 @@ const Dashboard = () => {
             <Button className="btn !bg-green-600 !text-white btn-sm">
               Export
             </Button>
-            <Button className="btn-blue !text-white btn-sm">Add Product</Button>
+            <Button
+              className="btn-blue !text-white btn-sm"
+              onClick={() =>
+                context.setIsOpenFullScreenPanel({
+                  open: true,
+                  model: "Add Product",
+                })
+              }
+            >
+              Add Product
+            </Button>
           </div>
         </div>
 
@@ -1352,7 +1383,12 @@ const Dashboard = () => {
             strokeWidth={3}
             activeDot={{ r: 8 }}
           />
-          <Line type="monotone" dataKey="TotalUsers" stroke="#82ca9d" strokeWidth={3} />
+          <Line
+            type="monotone"
+            dataKey="TotalUsers"
+            stroke="#82ca9d"
+            strokeWidth={3}
+          />
         </LineChart>
       </div>
     </>
