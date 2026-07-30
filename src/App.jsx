@@ -4,15 +4,19 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Dashboard from "./Pages/Dashboard";
 import Header from "./Components/Header";
 import Sidebar from "./Components/Sidebar";
+import Login from "./Pages/Login";
+import SignUp from "./Pages/SignUp";
 
 const MyContext = createContext();
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isLogin, setIsLogin] = useState(false);
 
   const router = createBrowserRouter([
     {
       path: "/",
+      exact: true,
       element: (
         <>
           <section className="main">
@@ -29,11 +33,33 @@ function App() {
         </>
       ),
     },
+    {
+      path: "/login",
+      exact: true,
+      element: (
+        <>
+          <Login />
+        </>
+      ),
+      
+    },
+    {
+      path: "/sign-up",
+      exact: true,
+      element: (
+        <>
+          <SignUp />
+        </>
+      ),
+      
+    },
   ]);
 
   const values = {
     isSidebarOpen,
-    setIsSidebarOpen
+    setIsSidebarOpen,
+    isLogin,
+    setIsLogin,
   };
 
 
