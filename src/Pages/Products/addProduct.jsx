@@ -278,7 +278,7 @@ const AddProduct = () => {
                     wrapperProps={{
                       style: { transitionDelay: "1s" },
                     }}
-                    src={"boy.png"}
+                    src={"/boy.png"}
                   />
                 </div>
               </div>
@@ -301,7 +301,7 @@ const AddProduct = () => {
                     wrapperProps={{
                       style: { transitionDelay: "1s" },
                     }}
-                    src={"boy.png"}
+                    src={"/boy.png"}
                   />
                 </div>
               </div>
@@ -324,7 +324,7 @@ const AddProduct = () => {
                     wrapperProps={{
                       style: { transitionDelay: "1s" },
                     }}
-                    src={"boy.png"}
+                    src={"/boy.png"}
                   />
                 </div>
               </div>
@@ -347,7 +347,7 @@ const AddProduct = () => {
                     wrapperProps={{
                       style: { transitionDelay: "1s" },
                     }}
-                    src={"boy.png"}
+                    src={"/boy.png"}
                   />
                 </div>
               </div>
@@ -370,7 +370,7 @@ const AddProduct = () => {
                     wrapperProps={{
                       style: { transitionDelay: "1s" },
                     }}
-                    src={"boy.png"}
+                    src={"/boy.png"}
                   />
                 </div>
               </div>

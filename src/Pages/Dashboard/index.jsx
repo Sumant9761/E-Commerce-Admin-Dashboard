@@ -1077,9 +1077,9 @@ const Dashboard = () => {
                     onClick={() => isShowOrderedProduct(0)}
                   >
                     {isOpenOrderedProduct === 0 ? (
-                      <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
-                    ) : (
                       <FaAngleUp className="text-[16px] text-[rgba(0,0,0,0.7)]" />
+                    ) : (
+                      <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
                     )}
                   </Button>
                 </td>
@@ -1211,9 +1211,9 @@ const Dashboard = () => {
                     onClick={() => isShowOrderedProduct(1)}
                   >
                     {isOpenOrderedProduct === 1 ? (
-                      <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
-                    ) : (
                       <FaAngleUp className="text-[16px] text-[rgba(0,0,0,0.7)]" />
+                    ) : (
+                      <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
                     )}
                   </Button>
                 </td>
