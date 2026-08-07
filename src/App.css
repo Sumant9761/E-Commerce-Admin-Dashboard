@@ -43,3 +43,6 @@ input[type=number]::-webkit-outer-spin-button {
 .otpPage .container{height: 90vh; display: flex;}
 
 .MuiTableBody-root tr:nth-child(even){@apply bg-gray-50}
+
+button .MuiCircularProgress-root{width: 30px !important; height: 30px !important;}
+

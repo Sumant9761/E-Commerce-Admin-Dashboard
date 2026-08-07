@@ -1,5 +1,6 @@
 import { Button } from "@mui/material";
 import React, { useContext, useState } from "react";
+import { Link } from "react-router-dom";
 import { FaRegBell } from "react-icons/fa";
 import Badge from "@mui/material/Badge";
 import { styled } from "@mui/material/styles";
@@ -12,6 +13,8 @@ import { IoIosLogOut } from "react-icons/io";
 import { HiOutlineMenuAlt2 } from "react-icons/hi";
 import { FcMenu } from "react-icons/fc";
 import { MyContext } from "../../App";
+import { fetchDataFromApi } from "../../utils/api";
+import { useNavigate } from "react-router-dom";
 
 const StyledBadge = styled(Badge)(({ theme }) => ({
   "& .MuiBadge-badge": {
@@ -33,6 +36,23 @@ const Header = () => {
   };
 
   const context = useContext(MyContext);
+  const history = useNavigate();
+
+  const logout = () => {
+    setAnchorMyAcc(null);
+
+    fetchDataFromApi(
+      `/api/user/logout?token=${localStorage.getItem("accessToken")}`,
+      { withCredentials: true },
+    ).then((res) => {
+      if (res.error === false) {
+        context.setIsLogin(false);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        history("/");
+      }
+    });
+  };
 
   return (
     <header
@@ -119,10 +139,10 @@ const Header = () => {
 
                   <div className="info ">
                     <h3 className="text-[15px] font-[500] leading-5">
-                      Rohit Sharma
+                      {context?.userData?.name}
                     </h3>
                     <p className="text-[13px] font-[400] opacity-70">
-                      rohit@gmail.com
+                      {context?.userData?.email}
                     </p>
                   </div>
                 </div>
@@ -136,17 +156,16 @@ const Header = () => {
                 <FaRegUser className="text-[16px]" />{" "}
                 <span className="text-[14px]">Profile</span>
               </MenuItem>
-              <MenuItem
-                onClick={handleCloseMyAcc}
-                className="flex items-center gap-3"
-              >
+              <MenuItem onClick={logout} className="flex items-center gap-3">
                 <IoIosLogOut className="text-[18px]" />{" "}
                 <span className="text-[14px]">Sign Out</span>
               </MenuItem>
             </Menu>
           </div>
         ) : (
-          <Button className="btn-blue btn-sm !rounded-full">Sign In</Button>
+          <Link to="/login">
+            <Button className="btn-blue btn-sm !rounded-full">Sign In</Button>
+          </Link>
         )}
       </div>
     </header>

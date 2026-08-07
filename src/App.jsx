@@ -1,5 +1,5 @@
 import React from "react";
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react";
 import "./App.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Dashboard from "./Pages/Dashboard";
@@ -29,6 +29,8 @@ import ForgotPassword from "./Pages/ForgotPassword";
 import VerifyAccount from "./Pages/VerifyAccount";
 import ChangePassword from "./Pages/ChangePassword";
 
+import toast, { Toaster } from "react-hot-toast";
+import { fetchDataFromApi } from "./utils/api";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -39,6 +41,7 @@ const MyContext = createContext();
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLogin, setIsLogin] = useState(false);
+  const [userData, setUserData] = useState(null);
 
   const [isOpenFullScreenPanel, setIsOpenFullScreenPanel] = useState({
     open: false,
@@ -254,6 +257,38 @@ function App() {
     },
   ]);
 
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+
+    if (token !== undefined && token !== null && token !== "") {
+      setIsLogin(true);
+
+      fetchDataFromApi("/api/user/user-details").then((res) => {
+        setUserData(res.data);
+        if (res?.response?.data?.error === true) {
+          if (res?.response?.data?.message === "You have not login") {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            openAlertBox("error", "Your session is closed please login again");
+            window.location.href = "/login";
+            setIsLogin(false);
+          }
+        }
+      });
+    } else {
+      setIsLogin(false);
+    }
+  }, [isLogin]);
+
+  const openAlertBox = (status, msg) => {
+    if (status === "success") {
+      toast.success(msg);
+    }
+    if (status === "error") {
+      toast.error(msg);
+    }
+  };
+
   const values = {
     isSidebarOpen,
     setIsSidebarOpen,
@@ -261,6 +296,9 @@ function App() {
     setIsLogin,
     isOpenFullScreenPanel,
     setIsOpenFullScreenPanel,
+    openAlertBox,
+    setUserData,
+    userData,
   };
 
   return (
@@ -270,7 +308,7 @@ function App() {
 
         <Dialog
           fullScreen
-          open={isOpenFullScreenPanel.open} 
+          open={isOpenFullScreenPanel.open}
           onClose={() =>
             setIsOpenFullScreenPanel({
               open: false,
@@ -293,30 +331,27 @@ function App() {
                 <IoMdClose className="text-gray-900" />
               </IconButton>
               <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-                <span className="text-gray-900">{isOpenFullScreenPanel.model}</span>
+                <span className="text-gray-900">
+                  {isOpenFullScreenPanel.model}
+                </span>
               </Typography>
-               
             </Toolbar>
           </AppBar>
 
+          {isOpenFullScreenPanel.model === "Add Product" && <AddProduct />}
 
-          {
-            isOpenFullScreenPanel.model === "Add Product" && <AddProduct />
-          }
+          {isOpenFullScreenPanel.model === "Add Home Slide" && <AddHomeSlide />}
 
-          {
-            isOpenFullScreenPanel.model === "Add Home Slide" && <AddHomeSlide />
-          }
+          {isOpenFullScreenPanel.model === "Add New Category" && (
+            <AddCategory />
+          )}
 
-          {
-            isOpenFullScreenPanel.model === "Add New Category" && <AddCategory />
-          }
-
-          {
-            isOpenFullScreenPanel.model === "Add Sub Category" && <AddSubCategory />
-          }
-          
+          {isOpenFullScreenPanel.model === "Add Sub Category" && (
+            <AddSubCategory />
+          )}
         </Dialog>
+
+        <Toaster />
       </MyContext.Provider>
     </>
   );
