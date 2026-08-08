@@ -5,29 +5,24 @@ const apiUrl = import.meta.env.VITE_API_URL;
 //POST request
 export const postData = async (url, formData) => {
   try {
-    const response = await fetch(apiUrl + url, {
-      method: "POST",
+     const params = {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(formData),
-    });
+    };
+    const response = await axios.post(apiUrl + url, formData, params );
 
-    if(response.ok){
-      const data = await response.json();
-      //console.log(data);
-      return data;
-    }else{
-      const errorData = await response.json();
-      return errorData;
-    }
-
+    return response.data; // success case
   } catch (error) {
-    console.log('Error', error);
+    // Always return backend message
+    return {
+      success: false,
+      error: true,
+      message: error.response?.data?.message || "Something went wrong",
+    };
   }
 };
-
 
 // GET request
 export const fetchDataFromApi = async (url) => {
@@ -45,4 +40,36 @@ export const fetchDataFromApi = async (url) => {
     console.log(error);
     return error;
   }
+};
+
+// upload profile image
+export const uploadImage = async (url, updatedData) => {
+  const params = {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      "Content-Type": "multipart/form-data",
+    },
+  };
+
+  var response;
+  await axios.put(apiUrl + url, updatedData, params).then((res) => {
+    response = res;
+  });
+  return response;
+};
+
+//edit data
+export const editData = async (url, updatedData) => {
+  const params = {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      "Content-Type": "application/json",
+    },
+  };
+
+  var response;
+  await axios.put(apiUrl + url, updatedData, params).then((res) => {
+    response = res;
+  });
+  return response;
 };

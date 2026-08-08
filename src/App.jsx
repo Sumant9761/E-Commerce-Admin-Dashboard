@@ -31,6 +31,8 @@ import ChangePassword from "./Pages/ChangePassword";
 
 import toast, { Toaster } from "react-hot-toast";
 import { fetchDataFromApi } from "./utils/api";
+import Profile from "./Pages/Profile";
+import AddAddress from "./Pages/Address/addAddress";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -42,6 +44,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLogin, setIsLogin] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [address, setAddress] = useState([]);
 
   const [isOpenFullScreenPanel, setIsOpenFullScreenPanel] = useState({
     open: false,
@@ -255,6 +258,29 @@ function App() {
         </>
       ),
     },
+    {
+      path: "/profile",
+      exact: true,
+      element: (
+        <>
+          <section className="main">
+            <Header />
+            <div className="contentMain flex">
+              <div
+                className={`overflow-hidden sidebarWrapper ${isSidebarOpen === true ? "w-[16%]" : "w-[0px] opacity-0"} transition-all`}
+              >
+                <Sidebar />
+              </div>
+              <div
+                className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
+              >
+                <Profile />
+              </div>
+            </div>
+          </section>
+        </>
+      ),
+    },
   ]);
 
   useEffect(() => {
@@ -299,6 +325,8 @@ function App() {
     openAlertBox,
     setUserData,
     userData,
+    setAddress,
+    address
   };
 
   return (
@@ -348,6 +376,10 @@ function App() {
 
           {isOpenFullScreenPanel.model === "Add Sub Category" && (
             <AddSubCategory />
+          )}
+
+          {isOpenFullScreenPanel.model === "Add New Address" && (
+            <AddAddress />
           )}
         </Dialog>
 
