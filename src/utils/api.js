@@ -58,6 +58,18 @@ export const uploadImage = async (url, updatedData) => {
   return response;
 };
 
+// Upload and create category
+export const uploadImageAndCreateCategory = async (url, formData) => {
+  const params = {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      "Content-Type": "multipart/form-data",
+    },
+  };
+  const response = await axios.post(apiUrl + url, formData, params);
+  return response.data;
+};
+
 //edit data
 export const editData = async (url, updatedData) => {
   const params = {
@@ -73,3 +85,16 @@ export const editData = async (url, updatedData) => {
   });
   return response;
 };
+
+// Delete data
+export const deleteData = async (url) => {
+  const params = {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      "Content-Type": "application/json",
+    },
+  };
+  const { data } = await axios.delete(apiUrl + url, params);
+  return data;
+};
+

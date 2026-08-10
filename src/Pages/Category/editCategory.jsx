@@ -1,15 +1,15 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import UploadBox from "../../Components/UploadBox";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
 import { IoMdClose } from "react-icons/io";
 import { Button } from "@mui/material";
 import { FaCloudUploadAlt } from "react-icons/fa";
-import { deleteData, postData } from "../../utils/api";
+import { deleteData, editData, fetchDataFromApi, postData } from "../../utils/api";
 import { MyContext } from "../../App";
 import CircularProgress from "@mui/material/CircularProgress";
 
-const AddCategory = () => {
+const EditCategory = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [formFields, setFormFields] = useState({
@@ -21,14 +21,20 @@ const AddCategory = () => {
 
   const context = useContext(MyContext);
 
+  useEffect(() => {
+    const id = context?.isOpenFullScreenPanel?.id;
+
+    fetchDataFromApi(`/api/category/${id}`).then((res) => {
+        formFields.name = res?.category?.name;
+        setPreview(res?.category?.images);
+    })
+
+  },[])
+
   const onChangeInput = (e) => {
     const { name, value } = e.target;
-    setFormFields(() => {
-      return {
-        ...formFields,
-        [name]: value,
-      };
-    });
+    setFormFields({ ...formFields, [name]: value });
+    formFields.images = preview;
   };
 
   const setPreviewFun = (previewArr) => {
@@ -66,13 +72,13 @@ const AddCategory = () => {
       return false;
     }
 
-    postData("/api/category/create", formFields).then((res) => {
+    editData(`/api/category/${context?.isOpenFullScreenPanel?.id}`, formFields).then((res) => {
+      console.log(res);
       setTimeout(() => {
         setIsLoading(false);
         context.setIsOpenFullScreenPanel({
           open: false,
         });
-        context?.getCat();
       }, 1000);
     });
   };
@@ -154,4 +160,4 @@ const AddCategory = () => {
   );
 };
 
-export default AddCategory;
+export default EditCategory;

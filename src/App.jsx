@@ -33,6 +33,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { fetchDataFromApi } from "./utils/api";
 import Profile from "./Pages/Profile";
 import AddAddress from "./Pages/Address/addAddress";
+import EditCategory from "./Pages/Category/editCategory";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -45,10 +46,12 @@ function App() {
   const [isLogin, setIsLogin] = useState(false);
   const [userData, setUserData] = useState(null);
   const [address, setAddress] = useState([]);
+  const [catData, setCatData] = useState([]);
 
   const [isOpenFullScreenPanel, setIsOpenFullScreenPanel] = useState({
     open: false,
     model: "",
+    id: "",
   });
 
   const router = createBrowserRouter([
@@ -306,6 +309,16 @@ function App() {
     }
   }, [isLogin]);
 
+  useEffect(() => {
+    getCat();
+  }, []);
+
+  const getCat = () => {
+    fetchDataFromApi("/api/category").then((res) => {
+      setCatData(res?.data);
+    });
+  };
+
   const openAlertBox = (status, msg) => {
     if (status === "success") {
       toast.success(msg);
@@ -326,7 +339,10 @@ function App() {
     setUserData,
     userData,
     setAddress,
-    address
+    address,
+    setCatData,
+    catData,
+    getCat
   };
 
   return (
@@ -378,9 +394,9 @@ function App() {
             <AddSubCategory />
           )}
 
-          {isOpenFullScreenPanel.model === "Add New Address" && (
-            <AddAddress />
-          )}
+          {isOpenFullScreenPanel.model === "Add New Address" && <AddAddress />}
+
+          {isOpenFullScreenPanel.model === "Edit Category" && <EditCategory />}
         </Dialog>
 
         <Toaster />
