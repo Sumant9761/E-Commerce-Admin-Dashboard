@@ -56,7 +56,10 @@ const UploadBox = (props) => {
      w-[100%] bg-gray-100 cursor-pointer hover:bg-gray-300 flex items-center justify-center flex-col relative"
     >
       {uploading === true ? (
-        <CircularProgress />
+        <>
+          <CircularProgress />
+          <h4 className="text-center">Uploading...</h4>
+        </>
       ) : (
         <>
           <IoImagesOutline className="text-[40px] opacity-35 pointer-events-none" />

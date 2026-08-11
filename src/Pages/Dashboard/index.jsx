@@ -1,4 +1,4 @@
-import React, { useState, PureComponent, useContext } from "react";
+import React, { useState, PureComponent, useContext, useEffect } from "react";
 import DashboardBoxes from "../../Components/DashboardBoxes";
 import { Button } from "@mui/material";
 import { FaPlus } from "react-icons/fa";
@@ -33,6 +33,12 @@ import {
   Legend,
 } from "recharts";
 import { MyContext } from "../../App";
+import SearchBox from "../../Components/SearchBox";
+import Rating from "@mui/material/Rating";
+import { LazyLoadImage } from "react-lazy-load-image-component";
+import "react-lazy-load-image-component/src/effects/blur.css";
+import CircularProgress from "@mui/material/CircularProgress";
+import { fetchDataFromApi } from "../../utils/api";
 
 const label = { slotProps: { input: { "aria-label": "Checkbox demo" } } };
 
@@ -42,6 +48,7 @@ const columns = [
   { id: "subcategory", label: "SUB CATEGORY", minWidth: 150 },
   { id: "price", label: "PRICE", minWidth: 130 },
   { id: "sales", label: "SALES", minWidth: 100 },
+  { id: "rating", label: "RATING", minWidth: 100 },
   { id: "action", label: "ACTION", minWidth: 120 },
 ];
 
@@ -53,15 +60,11 @@ function createData(name, code, population, size) {
 const Dashboard = () => {
   const [isOpenOrderedProduct, setIsOpenOrderedProduct] = useState(null);
 
-  const context = useContext(MyContext);
-
-  const isShowOrderedProduct = (index) => {
-    if (isOpenOrderedProduct === index) {
-      setIsOpenOrderedProduct(null);
-    } else {
-      setIsOpenOrderedProduct(index);
-    }
-  };
+  const [isLoading, setIsLoading] = useState(false);
+  const [productCat, setProductCat] = useState("");
+  const [productSubCat, setProductSubCat] = useState("");
+  const [productThirdLevelSubCat, setProductThirdLevelSubCat] = useState("");
+  const [productData, setProductData] = useState([]);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -141,6 +144,20 @@ const Dashboard = () => {
     },
   ]);
 
+  const context = useContext(MyContext);
+
+  useEffect(() => {
+    getProducts();
+  }, [context?.isOpenFullScreenPanel]);
+
+  const isShowOrderedProduct = (index) => {
+    if (isOpenOrderedProduct === index) {
+      setIsOpenOrderedProduct(null);
+    } else {
+      setIsOpenOrderedProduct(index);
+    }
+  };
+
   const handleChangeCatFilter = (event) => {
     setCategoryFilterVal(event.target.value);
   };
@@ -153,6 +170,110 @@ const Dashboard = () => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
+
+  // Handler to toggle all checkboxes
+  const handleSelectAll = (e) => {
+    const isChecked = e.target.checked;
+
+    //Update all items' checked status
+    const updatedItems = productData.map((item) => ({
+      ...item,
+      checked: isChecked,
+    }));
+    setProductData(updatedItems);
+
+    //Update the sorted IDs state
+
+    if (isChecked) {
+      const ids = updatedItems.map((item) => item._id).sort((a, b) => a - b);
+      setSortedIds(ids);
+    } else {
+      setSortedIds([]);
+    }
+  };
+
+  // Handler to toggle individual checkboxes
+  const handleCheckboxChange = (e, id, index) => {
+    const updatedItems = productData.map((item) =>
+      item._id === id ? { ...item, checked: !item.checked } : item,
+    );
+    setProductData(updatedItems);
+
+    // Update the sorted IDs state
+    const selectedIds = updatedItems
+      .filter((item) => item.checked)
+      .map((item) => item._id)
+      .sort((a, b) => a - b);
+    setSortedIds(selectedIds);
+  };
+
+  const getProducts = async () => {
+    setIsLoading(true);
+    fetchDataFromApi("/api/product/getAllProducts").then((res) => {
+      let productArr = [];
+      if (res?.error === false) {
+        for (let i = 0; i < res?.products?.length; i++) {
+          productArr[i] = res?.products[i];
+          productArr[i].checked = false;
+        }
+        setTimeout(() => {
+          setProductData(productArr);
+          setIsLoading(false);
+        }, 300);
+      }
+    });
+  };
+
+  const handleChangeProductCat = (event) => {
+    setProductCat(event.target.value);
+    setProductSubCat("");
+    setProductThirdLevelSubCat("");
+    setIsLoading(true);
+    fetchDataFromApi(
+      `/api/product/getAllProductsByCatId/${event.target.value}`,
+    ).then((res) => {
+      if (res?.error === false) {
+        setProductData(res?.products);
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 300);
+      }
+    });
+  };
+
+    const handleChangeProductSubCat = (event) => {
+      setProductSubCat(event.target.value);
+      setProductCat("");
+      setProductThirdLevelSubCat("");
+      setIsLoading(true);
+      fetchDataFromApi(
+        `/api/product/getAllProductsBySubCatId/${event.target.value}`,
+      ).then((res) => {
+        if (res?.error === false) {
+          setProductData(res?.products);
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 300);
+        }
+      });
+    };
+  
+    const handleChangeProductThirdLevelSubCat = (event) => {
+      setProductThirdLevelSubCat(event.target.value);
+      setProductCat("");
+      setProductSubCat("");
+      setIsLoading(true);
+      fetchDataFromApi(
+        `/api/product/getAllProductsByThirdLevelSubCat/${event.target.value}`,
+      ).then((res) => {
+        if (res?.error === false) {
+          setProductData(res?.products);
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 300);
+        }
+      });
+    };
 
   return (
     <>
@@ -186,7 +307,7 @@ const Dashboard = () => {
 
       <DashboardBoxes />
 
-      <div className="card my-4 shadow-md sm:rounded-lg bg-white">
+      {/* <div className="card my-4 shadow-md sm:rounded-lg bg-white">
         <div className="flex items-center justify-between px-5 py-5">
           <h2 className="text-[18px] font-[600]">
             Products{" "}
@@ -614,52 +735,95 @@ const Dashboard = () => {
         <div className="flex items-center justify-end pt-4 pb-4 px-4">
           <Pagination count={10} color="primary" />
         </div>
-      </div>
+      </div> */}
 
-      <div className="card my-4 shadow-md sm:rounded-lg bg-white">
-        <div className="flex items-center justify-between px-5 py-5">
-          <h2 className="text-[18px] font-[600]">
-            Products{" "}
-            <span className="font-[400] text-[14px]">(Material UI Table)</span>
-          </h2>
-        </div>
-
-        <div className="flex items-center w-full pl-5 justify-between">
-          <div className="col w-[20%]">
+      <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white">
+        <div className="flex items-center w-full px-5 justify-between gap-4">
+          <div className="col w-[15%]">
             <h4 className="font-[600] text-[14px] mb-2">Category By</h4>
-            <Select
-              className="w-full"
-              size="small"
-              labelId="demo-simple-select-standard-label"
-              id="demo-simple-select-standard"
-              value={categoryFilterVal}
-              onChange={handleChangeCatFilter}
-              label="Category"
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              <MenuItem value={10}>Men</MenuItem>
-              <MenuItem value={20}>Women</MenuItem>
-              <MenuItem value={30}>Kids</MenuItem>
-            </Select>
+            {context?.catData?.length !== 0 && (
+              <Select
+                style={{ zoom: "80%" }}
+                labelId="demo-simple-select-label"
+                id="productCatDrop"
+                size="small"
+                className="w-full"
+                value={productCat}
+                label="Category"
+                onChange={handleChangeProductCat}
+              >
+                {context?.catData?.map((cat, index) => {
+                  return <MenuItem value={cat?._id}>{cat?.name}</MenuItem>;
+                })}
+              </Select>
+            )}
           </div>
 
-          <div className="col w-[25%] ml-auto flex items-center gap-3">
-            <Button className="btn !bg-green-600 !text-white btn-sm">
-              Export
-            </Button>
-            <Button
-              className="btn-blue !text-white btn-sm"
-              onClick={() =>
-                context.setIsOpenFullScreenPanel({
-                  open: true,
-                  model: "Add Product",
-                })
-              }
-            >
-              Add Product
-            </Button>
+          <div className="col w-[15%]">
+            <h4 className="font-[600] text-[14px] mb-2">Sub Category By</h4>
+            {context?.catData?.length !== 0 && (
+              <Select
+                style={{ zoom: "80%" }}
+                labelId="demo-simple-select-label"
+                id="productCatDrop"
+                size="small"
+                className="w-full"
+                value={productSubCat}
+                label="Sub Category"
+                onChange={handleChangeProductSubCat}
+              >
+                {context?.catData?.map((cat, index) => {
+                  return (
+                    cat?.children?.length !== 0 &&
+                    cat?.children?.map((subCat, index_) => {
+                      return (
+                        <MenuItem value={subCat?._id}>{subCat?.name}</MenuItem>
+                      );
+                    })
+                  );
+                })}
+              </Select>
+            )}
+          </div>
+
+          <div className="col w-[18%]">
+            <h4 className="font-[600] text-[14px] mb-2">
+              Third Level Category By
+            </h4>
+            {context?.catData?.length !== 0 && (
+              <Select
+                style={{ zoom: "80%" }}
+                labelId="demo-simple-select-label"
+                id="productCatDrop"
+                size="small"
+                className="w-full"
+                value={productThirdLevelSubCat}
+                label="Sub Category"
+                onChange={handleChangeProductThirdLevelSubCat}
+              >
+                {context?.catData?.map((cat) => {
+                  return (
+                    cat?.children?.length !== 0 &&
+                    cat?.children?.map((subCat) => {
+                      return (
+                        subCat?.children?.length !== 0 &&
+                        subCat?.children?.map((thirdLavelCat, index) => {
+                          return (
+                            <MenuItem value={thirdLavelCat?._id} key={index}>
+                              {thirdLavelCat?.name}
+                            </MenuItem>
+                          );
+                        })
+                      );
+                    })
+                  );
+                })}
+              </Select>
+            )}
+          </div>
+
+          <div className="col w-[20%] ml-auto">
+            <SearchBox />
           </div>
         </div>
 
@@ -670,7 +834,16 @@ const Dashboard = () => {
             <TableHead>
               <TableRow>
                 <TableCell>
-                  <Checkbox {...label} size="small" />
+                  <Checkbox
+                    {...label}
+                    size="small"
+                    onChange={handleSelectAll}
+                    checked={
+                      productData?.length > 0
+                        ? productData.every((item) => item.checked)
+                        : false
+                    }
+                  />
                 </TableCell>
                 {columns.map((column) => (
                   <TableCell
@@ -684,330 +857,132 @@ const Dashboard = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
+              {isLoading === false ? (
+                productData?.length !== 0 &&
+                productData
+                  ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  ?.reverse()
+                  ?.map((product, index) => {
+                    return (
+                      <TableRow key={index}>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          <Checkbox
+                            {...label}
+                            size="small"
+                            checked={product.checked === true ? true : false}
+                            onChange={(e) =>
+                              handleCheckboxChange(e, product._id, index)
+                            }
+                          />
+                        </TableCell>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          <div className="flex items-center gap-4 w-[300px]">
+                            <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
+                              <Link
+                                to={`/product/${product?._id}`}
+                                data-discover="true"
+                              >
+                                <LazyLoadImage
+                                  alt={"image"}
+                                  effect="blur"
+                                  className="w-full group-hover:scale-105 transition-all"
+                                  src={product?.images[0]}
+                                />
+                              </Link>
+                            </div>
 
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Electronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Women
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-primary">
-                      $58.00
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
+                            <div className="info w-[75%]">
+                              <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
+                                <Link to={`/product/${product?._id}`}>
+                                  {product?.name}
+                                </Link>
+                              </h3>
 
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
+                              <span className="text-[12px]">
+                                {product?.brand}
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          {product?.catName}
+                        </TableCell>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          {product?.subCat}
+                        </TableCell>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          <div className="flex gap-1 flex-col">
+                            <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
+                              &#x20b9; {product?.price}
+                            </span>
+                            <span className="price text-[14px] font-[600] text-primary">
+                              &#x20b9; {product?.oldPrice}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          <p className="text-[14px]">
+                            <span className="font-[600]">{product?.sale}</span>{" "}
+                            sale
+                          </p>
+                        </TableCell>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          <p className="text-[14px]">
+                            <Rating
+                              name="half-rating"
+                              defaultValue={product?.rating}
+                              size="small"
+                            />
+                          </p>
+                        </TableCell>
+                        <TableCell style={{ minWidth: columns.minWidth }}>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
+                          !rounded-full hover:!bg-[#ccc]"
+                              onClick={() =>
+                                context.setIsOpenFullScreenPanel({
+                                  open: true,
+                                  model: "Edit Product",
+                                  id: product?._id,
+                                })
+                              }
+                            >
+                              <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
+                            </Button>
 
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+                            <Link to={`/product/${product?._id}`}>
+                              <Button
+                                className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
+                          !rounded-full hover:!bg-[#ccc]"
+                              >
+                                <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                              </Button>
+                            </Link>
 
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Electronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Women
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-primary">
-                      $58.00
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Electronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Women
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-primary">
-                      $58.00
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Electronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Women
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-primary">
-                      $58.00
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-
-              <TableRow>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Electronics
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  Women
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-primary">
-                      $58.00
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="success" />
-                </TableCell>
-                <TableCell style={{ minWidth: columns.minWidth }}>
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+                            <Button
+                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
+                          !rounded-full hover:!bg-[#ccc]"
+                              onClick={() => deleteProduct(product?._id)}
+                            >
+                              <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+              ) : (
+                <>
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                      <div className="flex items-center justify-center w-full min-h-[400px]">
+                        <CircularProgress color="inherit" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </>
+              )}
             </TableBody>
           </Table>
         </TableContainer>

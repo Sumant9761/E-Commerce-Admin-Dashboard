@@ -6,6 +6,7 @@ import Select from "@mui/material/Select";
 import { MyContext } from "../../App";
 import CircularProgress from "@mui/material/CircularProgress";
 import { postData } from "../../utils/api";
+import { useNavigate } from "react-router-dom";
 
 const AddSubCategory = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +27,7 @@ const AddSubCategory = () => {
   });
 
   const context = useContext(MyContext);
+  const history = useNavigate();
 
   const handleChangeProductCat = (event) => {
     setProductCat(event.target.value);
@@ -96,6 +98,7 @@ const AddSubCategory = () => {
           open: false,
         });
         context?.getCat();
+        history("/subCategory/list");
       }, 1000);
     });
   };

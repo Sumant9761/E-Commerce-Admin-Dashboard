@@ -8,6 +8,7 @@ import { FaCloudUploadAlt } from "react-icons/fa";
 import { deleteData, postData } from "../../utils/api";
 import { MyContext } from "../../App";
 import CircularProgress from "@mui/material/CircularProgress";
+import { useNavigate } from "react-router-dom";
 
 const AddCategory = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +21,7 @@ const AddCategory = () => {
   const [preview, setPreview] = useState([]);
 
   const context = useContext(MyContext);
+  const history = useNavigate();
 
   const onChangeInput = (e) => {
     const { name, value } = e.target;
@@ -73,6 +75,7 @@ const AddCategory = () => {
           open: false,
         });
         context?.getCat();
+        history("/category/list");
       }, 1000);
     });
   };

@@ -8,21 +8,10 @@ import Sidebar from "./Components/Sidebar";
 import Login from "./Pages/Login";
 import SignUp from "./Pages/SignUp";
 import Products from "./Pages/Products";
-import AddProduct from "./Pages/Products/addProduct";
 
-import Dialog from "@mui/material/Dialog";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
-import { IoMdClose } from "react-icons/io";
-import Slide from "@mui/material/Slide";
 import HomeSliderBanners from "./Pages/HomeSliderBanners";
-import AddHomeSlide from "./Pages/HomeSliderBanners/addHomeSlide";
 import CategoryList from "./Pages/Category";
-import AddCategory from "./Pages/Category/addCategory";
 import SubCategoryList from "./Pages/Category/subCatList";
-import AddSubCategory from "./Pages/Category/addSubCategory";
 import Users from "./Pages/Users";
 import Orders from "./Pages/Orders";
 import ForgotPassword from "./Pages/ForgotPassword";
@@ -32,12 +21,11 @@ import ChangePassword from "./Pages/ChangePassword";
 import toast, { Toaster } from "react-hot-toast";
 import { fetchDataFromApi } from "./utils/api";
 import Profile from "./Pages/Profile";
-import AddAddress from "./Pages/Address/addAddress";
-import EditCategory from "./Pages/Category/editCategory";
+import ProductDetails from "./Pages/Products/productDetails";
+import AddRAMS from "./Pages/Products/addRAMS";
+import AddWeight from "./Pages/Products/addWeight";
+import AddSize from "./Pages/Products/addSize";
 
-const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
 
 const MyContext = createContext();
 
@@ -284,6 +272,98 @@ function App() {
         </>
       ),
     },
+    {
+      path: "/product/:id",
+      exact: true,
+      element: (
+        <>
+          <section className="main">
+            <Header />
+            <div className="contentMain flex">
+              <div
+                className={`overflow-hidden sidebarWrapper ${isSidebarOpen === true ? "w-[16%]" : "w-[0px] opacity-0"} transition-all`}
+              >
+                <Sidebar />
+              </div>
+              <div
+                className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
+              >
+                <ProductDetails />
+              </div>
+            </div>
+          </section>
+        </>
+      ),
+    },
+    {
+      path: "/product/addRams",
+      exact: true,
+      element: (
+        <>
+          <section className="main">
+            <Header />
+            <div className="contentMain flex">
+              <div
+                className={`overflow-hidden sidebarWrapper ${isSidebarOpen === true ? "w-[16%]" : "w-[0px] opacity-0"} transition-all`}
+              >
+                <Sidebar />
+              </div>
+              <div
+                className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
+              >
+                <AddRAMS />
+              </div>
+            </div>
+          </section>
+        </>
+      ),
+    },
+    {
+      path: "/product/addWeight",
+      exact: true,
+      element: (
+        <>
+          <section className="main">
+            <Header />
+            <div className="contentMain flex">
+              <div
+                className={`overflow-hidden sidebarWrapper ${isSidebarOpen === true ? "w-[16%]" : "w-[0px] opacity-0"} transition-all`}
+              >
+                <Sidebar />
+              </div>
+              <div
+                className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
+              >
+                <AddWeight />
+              </div>
+            </div>
+          </section>
+        </>
+      ),
+    },
+    {
+      path: "/product/addSize",
+      exact: true,
+      element: (
+        <>
+          <section className="main">
+            <Header />
+            <div className="contentMain flex">
+              <div
+                className={`overflow-hidden sidebarWrapper ${isSidebarOpen === true ? "w-[16%]" : "w-[0px] opacity-0"} transition-all`}
+              >
+                <Sidebar />
+              </div>
+              <div
+                className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
+              >
+                <AddSize />
+              </div>
+            </div>
+          </section>
+        </>
+      ),
+    },
   ]);
 
   useEffect(() => {
@@ -342,63 +422,13 @@ function App() {
     address,
     setCatData,
     catData,
-    getCat
+    getCat,
   };
 
   return (
     <>
       <MyContext.Provider value={values}>
         <RouterProvider router={router} />
-
-        <Dialog
-          fullScreen
-          open={isOpenFullScreenPanel.open}
-          onClose={() =>
-            setIsOpenFullScreenPanel({
-              open: false,
-            })
-          }
-          TransitionComponent={Transition}
-        >
-          <AppBar sx={{ position: "relative" }}>
-            <Toolbar>
-              <IconButton
-                edge="start"
-                color="inherit"
-                onClick={() =>
-                  setIsOpenFullScreenPanel({
-                    open: false,
-                  })
-                }
-                aria-label="close"
-              >
-                <IoMdClose className="text-gray-900" />
-              </IconButton>
-              <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-                <span className="text-gray-900">
-                  {isOpenFullScreenPanel.model}
-                </span>
-              </Typography>
-            </Toolbar>
-          </AppBar>
-
-          {isOpenFullScreenPanel.model === "Add Product" && <AddProduct />}
-
-          {isOpenFullScreenPanel.model === "Add Home Slide" && <AddHomeSlide />}
-
-          {isOpenFullScreenPanel.model === "Add New Category" && (
-            <AddCategory />
-          )}
-
-          {isOpenFullScreenPanel.model === "Add Sub Category" && (
-            <AddSubCategory />
-          )}
-
-          {isOpenFullScreenPanel.model === "Add New Address" && <AddAddress />}
-
-          {isOpenFullScreenPanel.model === "Edit Category" && <EditCategory />}
-        </Dialog>
-
         <Toaster />
       </MyContext.Provider>
     </>

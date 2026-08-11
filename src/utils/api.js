@@ -5,13 +5,13 @@ const apiUrl = import.meta.env.VITE_API_URL;
 //POST request
 export const postData = async (url, formData) => {
   try {
-     const params = {
+    const params = {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         "Content-Type": "application/json",
       },
     };
-    const response = await axios.post(apiUrl + url, formData, params );
+    const response = await axios.post(apiUrl + url, formData, params);
 
     return response.data; // success case
   } catch (error) {
@@ -98,3 +98,27 @@ export const deleteData = async (url) => {
   return data;
 };
 
+export const deleteMultipleData = async (url, ids) => {
+  try {
+    if (!Array.isArray(ids) || ids.length === 0)
+      throw new Error("IDs must be a non-empty array");
+
+    const params = {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        "Content-Type": "application/json",
+      },
+      data: { ids }, // THIS IS THE CRUCIAL PART
+    };
+
+    // The request must be: axios.delete(url, { data, headers })
+    const { data } = await axios.delete(apiUrl + url, params);
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      error: true,
+      message: error.response?.data?.message || "Something went wrong",
+    };
+  }
+};
