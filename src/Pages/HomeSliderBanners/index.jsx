@@ -1,5 +1,5 @@
 import { Button } from "@mui/material";
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -18,6 +18,11 @@ import { FaRegEye } from "react-icons/fa";
 import { GoTrash } from "react-icons/go";
 import SearchBox from "../../Components/SearchBox";
 import { MyContext } from "../../App";
+import {
+  deleteData,
+  deleteMultipleData,
+  fetchDataFromApi,
+} from "../../utils/api";
 
 const label = { slotProps: { input: { "aria-label": "Checkbox demo" } } };
 
@@ -29,12 +34,67 @@ const columns = [
 const HomeSliderBanners = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [categoryFilterVal, setCategoryFilterVal] = useState("");
+  const [slidesData, setSlidesData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sortedIds, setSortedIds] = useState([]);
 
   const context = useContext(MyContext);
 
-  const handleChangeCatFilter = (event) => {
-    setCategoryFilterVal(event.target.value);
+  useEffect(() => {
+    getData();
+  }, [useEffect?.isOpenFullScreenPanel]);
+
+  // Handler to toggle all checkboxes
+  const handleSelectAll = (e) => {
+    const isChecked = e.target.checked;
+
+    //Update all items' checked status
+    const updatedItems = slidesData.map((item) => ({
+      ...item,
+      checked: isChecked,
+    }));
+    setSlidesData(updatedItems);
+
+    //Update the sorted IDs state
+
+    if (isChecked) {
+      const ids = updatedItems.map((item) => item._id).sort((a, b) => a - b);
+      setSortedIds(ids);
+    } else {
+      setSortedIds([]);
+    }
+  };
+
+  // Handler to toggle individual checkboxes
+  const handleCheckboxChange = (e, id, index) => {
+    const updatedItems = slidesData.map((item) =>
+      item._id === id ? { ...item, checked: !item.checked } : item,
+    );
+    setSlidesData(updatedItems);
+
+    // Update the sorted IDs state
+    const selectedIds = updatedItems
+      .filter((item) => item.checked)
+      .map((item) => item._id)
+      .sort((a, b) => a - b);
+    setSortedIds(selectedIds);
+  };
+
+  const getData = () => {
+    setIsLoading(true);
+    fetchDataFromApi("/api/homeSlides").then((res) => {
+      let arr = [];
+      if (res?.error === false) {
+        for (let i = 0; i < res?.data?.length; i++) {
+          arr[i] = res?.data[i];
+          arr[i].checked = false;
+        }
+        setTimeout(() => {
+          setSlidesData(arr);
+          setIsLoading(false);
+        }, 300);
+      }
+    });
   };
 
   const handleChangePage = (event, newPage) => {
@@ -46,6 +106,30 @@ const HomeSliderBanners = () => {
     setPage(0);
   };
 
+  const deleteSlide = (id) => {
+    deleteData(`/api/homeSlides/${id}`).then((res) => {
+      context.openAlertBox("success", res?.message);
+      getData();
+    });
+  };
+
+  const deleteMultipleSlides = () => {
+    if (sortedIds.length === 0) {
+      context.openAlertBox("error", "Please select items to delete.");
+      return;
+    }
+    try {
+      deleteMultipleData("/api/homeSlides/deleteMultiple", sortedIds).then(
+        (res) => {
+          getData();
+          context.openAlertBox("success", "Slides deleted!");
+        },
+      );
+    } catch (error) {
+      context.openAlertBox("error", "Error in deleting items");
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between px-2 py-0 mt-3">
@@ -55,9 +139,17 @@ const HomeSliderBanners = () => {
         </h2>
 
         <div className="col w-[25%] ml-auto flex items-center justify-end gap-3">
-          <Button className="btn !bg-green-600 !text-white btn-sm">
-            Export
-          </Button>
+          {sortedIds?.length !== 0 && (
+            <Button
+              variant="contained"
+              className="btn-sm"
+              size="small"
+              color="error"
+              onClick={deleteMultipleSlides}
+            >
+              Delete
+            </Button>
+          )}
           <Button
             className="btn-blue !text-white btn-sm"
             onClick={() =>
@@ -73,13 +165,21 @@ const HomeSliderBanners = () => {
       </div>
 
       <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white">
-
         <TableContainer sx={{ maxHeight: 440 }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
                 <TableCell width={60}>
-                  <Checkbox {...label} size="small" />
+                  <Checkbox
+                    {...label}
+                    size="small"
+                    onChange={handleSelectAll}
+                    checked={
+                      slidesData?.length > 0
+                        ? slidesData.every((item) => item.checked)
+                        : false
+                    }
+                  />
                 </TableCell>
                 {columns.map((column) => (
                   <TableCell
@@ -93,38 +193,51 @@ const HomeSliderBanners = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              <TableRow>
-                <TableCell>
-                  <Checkbox {...label} size="small" />
-                </TableCell>
-                <TableCell width={300}>
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-full rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
+              {slidesData?.length !== 0 &&
+                slidesData?.map((item, index) => {
+                  return (
+                    <TableRow>
+                      <TableCell>
+                        <Checkbox
+                          {...label}
+                          size="small"
+                          checked={item.checked === true ? true : false}
+                          onChange={(e) =>
+                            handleCheckboxChange(e, item._id, index)
+                          }
                         />
-                      </Link>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell width={100}>
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
+                      </TableCell>
+                      <TableCell width={300}>
+                        <div className="flex items-center gap-4 w-[300px]">
+                          <div className="img w-full rounded-md overflow-hidden group">
+                            <img
+                              src={item?.images[0]}
+                              className="w-full group-hover:scale-105 transition-all"
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell width={100}>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
+                          !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
+                          >
+                            <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
+                          </Button>
 
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+                          <Button
+                            className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
+                          !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
+                            onClick={() => deleteSlide(item?._id)}
+                          >
+                            <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
             </TableBody>
           </Table>
         </TableContainer>

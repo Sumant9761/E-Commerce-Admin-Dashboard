@@ -25,6 +25,8 @@ import ProductDetails from "./Pages/Products/productDetails";
 import AddRAMS from "./Pages/Products/addRAMS";
 import AddWeight from "./Pages/Products/addWeight";
 import AddSize from "./Pages/Products/addSize";
+import BannerV1List from "./Pages/Banners/bannerV1List";
+import BlogList from "./Pages/Blog";
 
 
 const MyContext = createContext();
@@ -358,6 +360,52 @@ function App() {
                 className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
               >
                 <AddSize />
+              </div>
+            </div>
+          </section>
+        </>
+      ),
+    },
+    {
+      path: "/bannerV1List",
+      exact: true,
+      element: (
+        <>
+          <section className="main">
+            <Header />
+            <div className="contentMain flex">
+              <div
+                className={`overflow-hidden sidebarWrapper ${isSidebarOpen === true ? "w-[16%]" : "w-[0px] opacity-0"} transition-all`}
+              >
+                <Sidebar />
+              </div>
+              <div
+                className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
+              >
+                <BannerV1List />
+              </div>
+            </div>
+          </section>
+        </>
+      ),
+    },
+    {
+      path: "/blog/list",
+      exact: true,
+      element: (
+        <>
+          <section className="main">
+            <Header />
+            <div className="contentMain flex">
+              <div
+                className={`overflow-hidden sidebarWrapper ${isSidebarOpen === true ? "w-[16%]" : "w-[0px] opacity-0"} transition-all`}
+              >
+                <Sidebar />
+              </div>
+              <div
+                className={`contentRight py-4 px-5 ${isSidebarOpen === false ? "w-[100%]" : "w-[84%]"} transition-all`}
+              >
+                <BlogList />
               </div>
             </div>
           </section>

@@ -431,6 +431,7 @@ const Products = () => {
                               name="half-rating"
                               defaultValue={product?.rating}
                               size="small"
+                              readOnly
                             />
                           </p>
                         </TableCell>
@@ -488,7 +489,7 @@ const Products = () => {
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
           component="div"
-          count={10}
+          count={productData?.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

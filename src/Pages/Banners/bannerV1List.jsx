@@ -1,5 +1,5 @@
 import { Button } from "@mui/material";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -8,36 +8,41 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import { Link } from "react-router-dom";
 import { AiOutlineEdit } from "react-icons/ai";
 import { GoTrash } from "react-icons/go";
 import { MyContext } from "../../App";
-import { deleteData, fetchDataFromApi } from "../../utils/api";
-import { LazyLoadImage } from "react-lazy-load-image-component";
-import "react-lazy-load-image-component/src/effects/blur.css";
-
+import {
+  deleteData,
+  deleteMultipleData,
+  fetchDataFromApi,
+} from "../../utils/api";
 
 const columns = [
-  { id: "image", label: "IMAGE", minWidth: 150 },
-  { id: "catName", label: "CATEGORY NAME", minWidth: 150 },
+  { id: "image", label: "IMAGE", minWidth: 100 },
   { id: "action", label: "ACTION", minWidth: 100 },
 ];
 
-const CategoryList = () => {
+const BannerV1List = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [categoryFilterVal, setCategoryFilterVal] = useState("");
+  const [slidesData, setSlidesData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sortedIds, setSortedIds] = useState([]);
 
   const context = useContext(MyContext);
 
   useEffect(() => {
-    fetchDataFromApi("/api/category").then((res) => {
-      context?.setCatData(res?.data);
-    });
+    getBanners();
   }, [context?.isOpenFullScreenPanel]);
 
-  const handleChangeCatFilter = (event) => {
-    setCategoryFilterVal(event.target.value);
+  const getBanners = () => {
+    setIsLoading(true);
+    fetchDataFromApi("/api/bannerV1").then((res) => {
+      setTimeout(() => {
+        setSlidesData(res?.data);
+        setIsLoading(false);
+      }, 300);
+    });
   };
 
   const handleChangePage = (event, newPage) => {
@@ -49,36 +54,30 @@ const CategoryList = () => {
     setPage(0);
   };
 
-  const deleteCat = (id) => {
-    deleteData(`/api/category/${id}`).then((res) => {
-      fetchDataFromApi("/api/category").then((res) => {
-        context?.setCatData(res?.data);
-      });
+  const deleteBanner = (id) => {
+    deleteData(`/api/bannerV1/${id}`).then((res) => {
+      context.openAlertBox("success", res?.message);
+      getBanners();
     });
   };
+
 
   return (
     <>
       <div className="flex items-center justify-between px-2 py-0 mt-3">
-        <h2 className="text-[18px] font-[600]">
-          Category List{" "}
-          <span className="font-[400] text-[14px]">(Material UI Table)</span>
-        </h2>
+        <h2 className="text-[18px] font-[600]">Banners List</h2>
 
         <div className="col w-[25%] ml-auto flex items-center justify-end gap-3">
-          <Button className="btn !bg-green-600 !text-white btn-sm">
-            Export
-          </Button>
           <Button
             className="btn-blue !text-white btn-sm"
             onClick={() =>
               context.setIsOpenFullScreenPanel({
                 open: true,
-                model: "Add New Category",
+                model: "Add BannerV1",
               })
             }
           >
-            Add New Category
+            Add Banner
           </Button>
         </div>
       </div>
@@ -100,25 +99,20 @@ const CategoryList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {context?.catData?.length !== 0 &&
-                context?.catData?.map((item, index) => {
+              {slidesData?.length !== 0 &&
+                slidesData?.map((item, index) => {
                   return (
                     <TableRow key={index}>
-                      <TableCell width={100}>
-                        <div className="flex items-center gap-4 w-[50px]">
+                      <TableCell width={300}>
+                        <div className="flex items-center gap-4 w-[300px]">
                           <div className="img w-full rounded-md overflow-hidden group">
-                            <Link to="/products/4575" data-discover="true">
-                              <LazyLoadImage
-                                alt={"image"}
-                                effect="blur"
-                                className="w-full group-hover:scale-105 transition-all"
-                                src={item.images[0]}
-                              />
-                            </Link>
+                            <img
+                              src={item?.images[0]}
+                              className="w-full group-hover:scale-105 transition-all"
+                            />
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell width={100}>{item?.name}</TableCell>
                       <TableCell width={100}>
                         <div className="flex items-center gap-1">
                           <Button
@@ -127,7 +121,7 @@ const CategoryList = () => {
                             onClick={() =>
                               context.setIsOpenFullScreenPanel({
                                 open: true,
-                                model: "Edit Category",
+                                model: "Edit BannerV1",
                                 id: item?._id,
                               })
                             }
@@ -138,7 +132,7 @@ const CategoryList = () => {
                           <Button
                             className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
                           !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
-                            onClick={() => deleteCat(item?._id)}
+                            onClick={() => deleteBanner(item?._id)}
                           >
                             <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
                           </Button>
@@ -164,4 +158,4 @@ const CategoryList = () => {
   );
 };
 
-export default CategoryList;
+export default BannerV1List;

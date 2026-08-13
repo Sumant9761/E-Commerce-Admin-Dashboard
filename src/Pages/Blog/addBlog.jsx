@@ -1,35 +1,55 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useContext, useState } from "react";
 import UploadBox from "../../Components/UploadBox";
-import { LazyLoadImage } from "react-lazy-load-image-component";
-import "react-lazy-load-image-component/src/effects/blur.css";
 import { IoMdClose } from "react-icons/io";
 import { Button } from "@mui/material";
 import { FaCloudUploadAlt } from "react-icons/fa";
-import { MyContext } from "../../App";
 import { deleteData, postData } from "../../utils/api";
+import { MyContext } from "../../App";
 import CircularProgress from "@mui/material/CircularProgress";
 import { useNavigate } from "react-router-dom";
+import Editor from "react-simple-wysiwyg";
 
-const AddHomeSlide = () => {
+const AddBlog = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [preview, setPreview] = useState([]);
+  const [html, setHtml] = useState("");
 
   const [formFields, setFormFields] = useState({
+    title: "",
     images: [],
+    description: "",
   });
 
+  const [preview, setPreview] = useState([]);
+
   const context = useContext(MyContext);
-  const history = useNavigate(); 
+  const history = useNavigate();
+
+  const onChangeInput = (e) => {
+    const { name, value } = e.target;
+    setFormFields(() => {
+      return {
+        ...formFields,
+        [name]: value,
+      };
+    });
+  };
 
   const setPreviewFun = (previewArr) => {
-    setPreview(previewArr);
-    formFields.images = previewArr;
+    const imgArr = preview;
+    for (let i = 0; i < previewArr.length; i++) {
+      imgArr.push(previewArr[i]);
+    }
+    setPreview([]);
+    setTimeout(() => {
+      setPreview(imgArr);
+      formFields.images = imgArr;
+    }, 10);
   };
 
   const removeImg = (image, index) => {
     var imageArr = [];
     imageArr = preview;
-    deleteData(`/api/homeSlides/deleteImage?img=${image}`).then((res) => {
+    deleteData(`/api/blog/deleteImage?img=${image}`).then((res) => {
       imageArr.splice(index, 1);
 
       setPreview([]);
@@ -40,24 +60,42 @@ const AddHomeSlide = () => {
     });
   };
 
+  const onChangeDescription = (e) => {
+    setHtml(e.target.value);
+    formFields.description = e.target.value;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     setIsLoading(true);
+    console.log(formFields);
+    
 
+    if (formFields.title === "") {
+      context.openAlertBox("error", "Please enter title");
+      setIsLoading(false);
+      return false;
+    }
+    if (formFields.description === "") {
+      context.openAlertBox("error", "Please enter description");
+      setIsLoading(false);
+      return false;
+    }
     if (preview?.length === 0) {
-      context.openAlertBox("error", "Please select category image");
+      context.openAlertBox("error", "Please select image");
       setIsLoading(false);
       return false;
     }
 
-    postData("/api/homeSlides/add", formFields).then((res) => {
+    postData("/api/blog/add", formFields).then((res) => {
       setTimeout(() => {
         setIsLoading(false);
         context.setIsOpenFullScreenPanel({
           open: false,
         });
-        history("/homeSlider/list");
+        context?.getBlogs();
+        history("/blog/list");
       }, 1000);
     });
   };
@@ -66,6 +104,39 @@ const AddHomeSlide = () => {
     <section className="p-5 bg-gray-50">
       <form className="form py-3 p-8" onSubmit={handleSubmit}>
         <div className="scroll max-h-[72vh] overflow-y-scroll pr-4 pt-4">
+          <div className="grid grid-cols-1 mb-3">
+            <div className="col w-[100%]">
+              <h3 className="text-[14px] font-[500] mb-1 text-black">Title</h3>
+              <input
+                type="text"
+                className="w-full h-[40px] border border-[rgba(0,0,0,0.2)] rounded-sm
+              focus:outline-none focus:border-[rgba(0,0,0,0.5)] p-3 text-sm"
+                name="title"
+                value={formFields.title}
+                onChange={onChangeInput}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 mb-3">
+            <div className="col w-[100%]">
+              <h3 className="text-[14px] font-[500] mb-1 text-black">
+                Description
+              </h3>
+              <Editor
+                value={html}
+                onChange={onChangeDescription}
+                containerProps={{ style: { resize: "vertical" } }}
+              />
+            </div>
+          </div>
+
+          <br />
+
+          <h3 className="text-[18px] font-[500] mb-1 text-black">Image</h3>
+
+          <br />
+
           <div className="grid grid-cols-7 gap-4">
             {preview.length !== 0 &&
               preview?.map((image, index) => {
@@ -89,8 +160,8 @@ const AddHomeSlide = () => {
               })}
 
             <UploadBox
-              multiple={false}
-              url="/api/homeSlides/uploadImages"
+              multiple={true}
+              url="/api/blog/uploadImages"
               setPreviewFun={setPreviewFun}
             />
           </div>
@@ -115,4 +186,4 @@ const AddHomeSlide = () => {
   );
 };
 
-export default AddHomeSlide;
+export default AddBlog;

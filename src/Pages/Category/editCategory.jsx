@@ -1,7 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
 import UploadBox from "../../Components/UploadBox";
-import { LazyLoadImage } from "react-lazy-load-image-component";
-import "react-lazy-load-image-component/src/effects/blur.css";
 import { IoMdClose } from "react-icons/io";
 import { Button } from "@mui/material";
 import { FaCloudUploadAlt } from "react-icons/fa";
