@@ -24,8 +24,8 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -38,7 +38,7 @@ import Rating from "@mui/material/Rating";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
 import CircularProgress from "@mui/material/CircularProgress";
-import { fetchDataFromApi } from "../../utils/api";
+import { deleteData, deleteMultipleData, fetchDataFromApi } from "../../utils/api";
 
 const label = { slotProps: { input: { "aria-label": "Checkbox demo" } } };
 
@@ -60,11 +60,27 @@ function createData(name, code, population, size) {
 const Dashboard = () => {
   const [isOpenOrderedProduct, setIsOpenOrderedProduct] = useState(null);
 
+  const [ordersData, setOrdersData] = useState([]);
+  const [pageOrder, setPageOrder] = useState(1);
+  const [seachQuery, setSeachQuery] = useState("");
+  const [totalOrdersData, setTotalOrdersData] = useState([]);
+
+  const [usersCount, setUsersCount] = useState(0);
+  const [ordersCount, setOrdersCount] = useState(0);
+  const [productsCount, setProductsCount] = useState(0);
+  const [categoryCount, setCategoryCount] = useState(0);
+
+  const [chartType, setChartType] = useState("users");
+  const [monthlyUsersData, setMonthlyUsersData] = useState([]);
+  const [monthlySalesData, setMonthlySalesData] = useState([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [productCat, setProductCat] = useState("");
   const [productSubCat, setProductSubCat] = useState("");
   const [productThirdLevelSubCat, setProductThirdLevelSubCat] = useState("");
   const [productData, setProductData] = useState([]);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [sortedIds, setSortedIds] = useState([]);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -171,6 +187,86 @@ const Dashboard = () => {
     setPage(0);
   };
 
+  useEffect(() => {
+    fetchDataFromApi(`/api/order/order-list?page=${pageOrder}&limit=5`).then(
+      (res) => {
+        if (res?.error === false) {
+          setOrdersData(res);
+        }
+      },
+    );
+    fetchDataFromApi("/api/order/order-list").then((res) => {
+      if (res?.error === false) {
+        setTotalOrdersData(res);
+        setOrdersCount(res?.data?.length || 0);
+      }
+    });
+  }, [pageOrder]);
+
+  useEffect(() => {
+    fetchDataFromApi("/api/user/getAllUsers").then((res) => {
+      if (res?.error === false && res?.users) {
+        setUsersCount(res?.users?.length || 0);
+      }
+    });
+
+    fetchDataFromApi("/api/product/getProductsCount").then((res) => {
+      if (res?.error === false && res?.productsCount !== undefined) {
+        setProductsCount(res?.productsCount);
+      } else if (res?.products?.length) {
+        setProductsCount(res?.products?.length);
+      }
+    });
+
+    fetchDataFromApi("/api/category/get/count").then((res) => {
+      if (res?.CategoryCount !== undefined) {
+        setCategoryCount(res?.CategoryCount);
+      } else if (context?.catData?.length) {
+        setCategoryCount(context?.catData?.length);
+      }
+    });
+
+    fetchDataFromApi("/api/order/users").then((res) => {
+      if (res?.TotalUsers) {
+        setMonthlyUsersData(res?.TotalUsers);
+      }
+    });
+
+    fetchDataFromApi("/api/order/sales").then((res) => {
+      if (res?.monthlySales) {
+        setMonthlySalesData(res?.monthlySales);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (context?.catData?.length) {
+      setCategoryCount(context?.catData?.length);
+    }
+  }, [context?.catData]);
+
+  useEffect(() => {
+    // Filters orders based on search query
+    if (seachQuery !== "") {
+      const filteredOrders = totalOrdersData?.data?.filter(
+        (order) =>
+          order?._id?.toLowerCase().includes(seachQuery.toLowerCase()) ||
+          order?.userId?.name?.toLowerCase().includes(seachQuery.toLowerCase()) ||
+          order?.userId?.email?.toLowerCase().includes(seachQuery.toLowerCase()) ||
+          order?.createdAt?.includes(seachQuery)
+      );
+      setOrdersData({ ...totalOrdersData, data: filteredOrders });
+    } else {
+      fetchDataFromApi(`/api/order/order-list?page=${pageOrder}&limit=5`).then(
+        (res) => {
+          if (res?.error === false) {
+            setOrdersData(res);
+          }
+        }
+      );
+    }
+  }, [seachQuery, pageOrder]);
+
   // Handler to toggle all checkboxes
   const handleSelectAll = (e) => {
     const isChecked = e.target.checked;
@@ -224,6 +320,29 @@ const Dashboard = () => {
     });
   };
 
+  const deleteProduct = (id) => {
+    deleteData(`/api/product/${id}`).then((res) => {
+      getProducts();
+      context?.openAlertBox("success", res?.message || "Product deleted!");
+    });
+  };
+
+  const deleteMultipleProduct = () => {
+    if (sortedIds.length === 0) {
+      context?.openAlertBox("error", "Please select products to delete.");
+      return;
+    }
+    try {
+      deleteMultipleData("/api/product/deleteMultiple", sortedIds).then((res) => {
+        getProducts();
+        setSortedIds([]);
+        context?.openAlertBox("success", "Products deleted successfully!");
+      });
+    } catch (error) {
+      context?.openAlertBox("error", "Error in deleting products");
+    }
+  };
+
   const handleChangeProductCat = (event) => {
     setProductCat(event.target.value);
     setProductSubCat("");
@@ -241,46 +360,62 @@ const Dashboard = () => {
     });
   };
 
-    const handleChangeProductSubCat = (event) => {
-      setProductSubCat(event.target.value);
-      setProductCat("");
-      setProductThirdLevelSubCat("");
-      setIsLoading(true);
-      fetchDataFromApi(
-        `/api/product/getAllProductsBySubCatId/${event.target.value}`,
-      ).then((res) => {
-        if (res?.error === false) {
-          setProductData(res?.products);
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 300);
-        }
-      });
-    };
-  
-    const handleChangeProductThirdLevelSubCat = (event) => {
-      setProductThirdLevelSubCat(event.target.value);
-      setProductCat("");
-      setProductSubCat("");
-      setIsLoading(true);
-      fetchDataFromApi(
-        `/api/product/getAllProductsByThirdLevelSubCat/${event.target.value}`,
-      ).then((res) => {
-        if (res?.error === false) {
-          setProductData(res?.products);
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 300);
-        }
-      });
-    };
+  const handleChangeProductSubCat = (event) => {
+    setProductSubCat(event.target.value);
+    setProductCat("");
+    setProductThirdLevelSubCat("");
+    setIsLoading(true);
+    fetchDataFromApi(
+      `/api/product/getAllProductsBySubCatId/${event.target.value}`,
+    ).then((res) => {
+      if (res?.error === false) {
+        setProductData(res?.products);
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 300);
+      }
+    });
+  };
+
+  const handleChangeProductThirdLevelSubCat = (event) => {
+    setProductThirdLevelSubCat(event.target.value);
+    setProductCat("");
+    setProductSubCat("");
+    setIsLoading(true);
+    fetchDataFromApi(
+      `/api/product/getAllProductsByThirdLevelSubCat/${event.target.value}`,
+    ).then((res) => {
+      if (res?.error === false) {
+        setProductData(res?.products);
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 300);
+      }
+    });
+  };
+
+  const filteredProducts = productData.filter(
+    (item) =>
+      item?.name?.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
+      item?.brand?.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
+      item?.catName?.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
+      item?.subCat?.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
+      (item?.price && String(item.price).includes(productSearchQuery))
+  );
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
 
   return (
     <>
       <div className="w-full py-2 px-5 border bg-[#f1faff] border-[rgba(0,0,0,0.1)] flex items-center gap-8 mb-5 justify-between rounded-md">
         <div className="info">
-          <h1 className="text-[35px] font-bold leading-10 mb-3">
-            Good Morning, <br /> Sumant
+          <h1 className="text-[35px] font-bold leading-10 mb-3 capitalize">
+            {getGreeting()}, <br /> {context?.userData?.name || "Sumant"}
           </h1>
           <p>
             Here's What happening on your store today. See the statistics at
@@ -305,437 +440,12 @@ const Dashboard = () => {
         <img src="/shop-illustration.webp" className="w-[250px]" />
       </div>
 
-      <DashboardBoxes />
-
-      {/* <div className="card my-4 shadow-md sm:rounded-lg bg-white">
-        <div className="flex items-center justify-between px-5 py-5">
-          <h2 className="text-[18px] font-[600]">
-            Products{" "}
-            <span className="font-[400] text-[14px]">(Tailwind CSS Table)</span>
-          </h2>
-        </div>
-
-        <div className="flex items-center w-full pl-5 justify-between">
-          <div className="col w-[20%]">
-            <h4 className="font-[600] text-[14px] mb-2">Category By</h4>
-            <Select
-              className="w-full"
-              size="small"
-              labelId="demo-simple-select-standard-label"
-              id="demo-simple-select-standard"
-              value={categoryFilterVal}
-              onChange={handleChangeCatFilter}
-              label="Category"
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              <MenuItem value={10}>Men</MenuItem>
-              <MenuItem value={20}>Women</MenuItem>
-              <MenuItem value={30}>Kids</MenuItem>
-            </Select>
-          </div>
-
-          <div className="col w-[25%] ml-auto flex items-center gap-3">
-            <Button className="btn !bg-green-600 !text-white btn-sm">
-              Export
-            </Button>
-            <Button
-              className="btn-blue !text-white btn-sm"
-              onClick={() =>
-                context.setIsOpenFullScreenPanel({
-                  open: true,
-                  model: "Add Product",
-                })
-              }
-            >
-              Add Product
-            </Button>
-          </div>
-        </div>
-
-        <div class="relative overflow-x-auto mt-5 pb-5 bg-neutral-primary-soft shadow-xs rounded-base border border-default">
-          <table class="w-full text-sm text-left rtl:text-right text-body">
-            <thead class="text-sm text-body bg-neutral-secondary-soft border-b rounded-base border-default">
-              <tr>
-                <th scope="col" class="px-6 pr-0 py-3 font-medium" width="10%">
-                  <div className="w-[60px]">
-                    <Checkbox {...label} size="small" />
-                  </div>
-                </th>
-                <th scope="col" class="px-2 py-3 font-medium whitespace-nowrap">
-                  PRODUCT
-                </th>
-                <th scope="col" class="px-6 py-3 font-medium whitespace-nowrap">
-                  CATEGORY
-                </th>
-                <th scope="col" class="px-6 py-3 font-medium whitespace-nowrap">
-                  SUB CATEGORY
-                </th>
-                <th scope="col" class="px-6 py-3 font-medium whitespace-nowrap">
-                  PRICE
-                </th>
-                <th scope="col" class="px-6 py-3 font-medium whitespace-nowrap">
-                  SALES
-                </th>
-                <th scope="col" class="px-6 py-3 font-medium whitespace-nowrap">
-                  ACTION
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="odd:bg-neutral-primary even:bg-neutral-secondary-soft border-b border-default">
-                <td class="px-6 pr-0 py-3">
-                  <div className="w-[60px]">
-                    <Checkbox {...label} size="small" />
-                  </div>
-                </td>
-
-                <td class="px-2 py-2">
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[500] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">Electronics</td>
-
-                <td class="px-6 py-2">Women</td>
-
-                <td class="px-6 py-2">
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-[#3872fa]">
-                      $58.00
-                    </span>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="error" />
-                </td>
-
-                <td class="px-6 py-2">
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr class="odd:bg-neutral-primary even:bg-neutral-secondary-soft border-b border-default">
-                <td class="px-6 pr-0 py-3">
-                  <div className="w-[60px]">
-                    <Checkbox {...label} size="small" />
-                  </div>
-                </td>
-
-                <td class="px-2 py-2">
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[500] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">Electronics</td>
-
-                <td class="px-6 py-2">Women</td>
-
-                <td class="px-6 py-2">
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-primary">
-                      $58.00
-                    </span>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="error" />
-                </td>
-
-                <td class="px-6 py-2">
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr class="odd:bg-neutral-primary even:bg-neutral-secondary-soft border-b border-default">
-                <td class="px-6 pr-0 py-3">
-                  <div className="w-[60px]">
-                    <Checkbox {...label} size="small" />
-                  </div>
-                </td>
-
-                <td class="px-2 py-2">
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[500] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">Electronics</td>
-
-                <td class="px-6 py-2">Women</td>
-
-                <td class="px-6 py-2">
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-[#3872fa]">
-                      $58.00
-                    </span>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="error" />
-                </td>
-
-                <td class="px-6 py-2">
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr class="odd:bg-neutral-primary even:bg-neutral-secondary-soft border-b border-default">
-                <td class="px-6 pr-0 py-3">
-                  <div className="w-[60px]">
-                    <Checkbox {...label} size="small" />
-                  </div>
-                </td>
-
-                <td class="px-2 py-2">
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[500] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">Electronics</td>
-
-                <td class="px-6 py-2">Women</td>
-
-                <td class="px-6 py-2">
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-[#3872fa]">
-                      $58.00
-                    </span>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="error" />
-                </td>
-
-                <td class="px-6 py-2">
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr class="odd:bg-neutral-primary even:bg-neutral-secondary-soft border-b border-default">
-                <td class="px-6 pr-0 py-3">
-                  <div className="w-[60px]">
-                    <Checkbox {...label} size="small" />
-                  </div>
-                </td>
-
-                <td class="px-2 py-2">
-                  <div className="flex items-center gap-4 w-[300px]">
-                    <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                      <Link to="/products/4575">
-                        <img
-                          src="https://ecme-react.themenate.net/img/products/product-1.jpg"
-                          className="w-full group-hover:scale-105 transition-all"
-                        />
-                      </Link>
-                    </div>
-
-                    <div className="info w-[75%]">
-                      <Link to="/products/4575">
-                        <h3 className="font-[500] text-[12px] leading-4 hover:text-primary">
-                          VNEED Women Embroidered Rayon Kurta Pant Set | Kurta
-                          Set for women
-                        </h3>
-                      </Link>
-                      <span className="text-[12px]">Flörven</span>
-                    </div>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">Electronics</td>
-
-                <td class="px-6 py-2">Women</td>
-
-                <td class="px-6 py-2">
-                  <div className="flex gap-1 flex-col">
-                    <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                      $58.00
-                    </span>
-                    <span className="price text-[14px] font-[600] text-[#3872fa]">
-                      $58.00
-                    </span>
-                  </div>
-                </td>
-
-                <td class="px-6 py-2">
-                  <p className="text-[14px]">
-                    <span className="font-[600]">234</span> sale
-                  </p>
-                  <Progress value={40} type="error" />
-                </td>
-
-                <td class="px-6 py-2">
-                  <div className="flex items-center gap-1">
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-
-                    <Button className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]">
-                      <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex items-center justify-end pt-4 pb-4 px-4">
-          <Pagination count={10} color="primary" />
-        </div>
-      </div> */}
+      <DashboardBoxes
+        users={usersCount}
+        orders={ordersCount || totalOrdersData?.data?.length || 0}
+        products={productsCount || productData?.length || 0}
+        categories={categoryCount || context?.catData?.length || 0}
+      />
 
       <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white">
         <div className="flex items-center w-full px-5 justify-between gap-4">
@@ -822,8 +532,21 @@ const Dashboard = () => {
             )}
           </div>
 
-          <div className="col w-[20%] ml-auto">
-            <SearchBox />
+          <div className="col w-[30%] ml-auto flex items-center justify-end gap-3">
+            {sortedIds?.length !== 0 && (
+              <Button
+                variant="contained"
+                className="btn-sm"
+                size="small"
+                color="error"
+                onClick={deleteMultipleProduct}
+              >
+                Delete
+              </Button>
+            )}
+            <div className="w-[70%]">
+              <SearchBox setSeachQuery={setProductSearchQuery} placeholder="Search products..." />
+            </div>
           </div>
         </div>
 
@@ -839,8 +562,8 @@ const Dashboard = () => {
                     size="small"
                     onChange={handleSelectAll}
                     checked={
-                      productData?.length > 0
-                        ? productData.every((item) => item.checked)
+                      filteredProducts?.length > 0
+                        ? filteredProducts.every((item) => item.checked)
                         : false
                     }
                   />
@@ -858,11 +581,10 @@ const Dashboard = () => {
             </TableHead>
             <TableBody>
               {isLoading === false ? (
-                productData?.length !== 0 &&
-                productData
-                  ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  ?.reverse()
-                  ?.map((product, index) => {
+                filteredProducts?.length !== 0 ? (
+                  filteredProducts
+                    ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    ?.map((product, index) => {
                     return (
                       <TableRow key={index}>
                         <TableCell style={{ minWidth: columns.minWidth }}>
@@ -972,16 +694,21 @@ const Dashboard = () => {
                       </TableRow>
                     );
                   })
-              ) : (
-                <>
+                ) : (
                   <TableRow>
-                    <TableCell colSpan={8}>
-                      <div className="flex items-center justify-center w-full min-h-[400px]">
-                        <CircularProgress color="inherit" />
-                      </div>
+                    <TableCell colSpan={8} align="center">
+                      No products found.
                     </TableCell>
                   </TableRow>
-                </>
+                )
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8}>
+                    <div className="flex items-center justify-center w-full min-h-[400px]">
+                      <CircularProgress color="inherit" />
+                    </div>
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
@@ -989,7 +716,7 @@ const Dashboard = () => {
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
           component="div"
-          count={10}
+          count={filteredProducts?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -1000,9 +727,16 @@ const Dashboard = () => {
       <div className="card my-4 shadow-md sm:rounded-lg bg-white">
         <div className="flex items-center justify-between px-5 py-5">
           <h2 className="text-[18px] font-[600]">Recent Orders</h2>
+          <div className="w-[25%]">
+            <SearchBox
+              seachQuery={seachQuery}
+              setSeachQuery={setSeachQuery}
+              setPageOrder={setPageOrder}
+            />
+          </div>
         </div>
 
-        <div class="relative overflow-x-auto mt-5 pb-5 bg-neutral-primary-soft shadow-xs rounded-base border border-default">
+        <div class="relative overflow-x-auto mt-5 bg-neutral-primary-soft shadow-xs rounded-base border border-default">
           <table class="w-full text-sm text-left rtl:text-right text-body">
             <thead class="text-sm text-body bg-neutral-secondary-soft border-b rounded-base border-default">
               <tr>
@@ -1045,326 +779,256 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              <tr class="bg-neutral-primary border-b border-default">
-                <td class="px-6 py-4">
-                  <Button
-                    className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-[#f1f1f1]"
-                    onClick={() => isShowOrderedProduct(0)}
-                  >
-                    {isOpenOrderedProduct === 0 ? (
-                      <FaAngleUp className="text-[16px] text-[rgba(0,0,0,0.7)]" />
-                    ) : (
-                      <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
-                    )}
-                  </Button>
-                </td>
-                <td class="px-6 py-4">
-                  <span className="text-[#3872fa] font-[600]">
-                    sc24evdfbfvwvb
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <span className="text-[#3872fa] font-[600]">fefeewgew</span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">Sumant Kumar</td>
-                <td class="px-6 py-4">7037366838</td>
-                <td class="px-6 py-4">
-                  <span className="block w-[300px]">
-                    Shyam vatika colony, Surajpur Greater noida
-                  </span>
-                </td>
-                <td class="px-6 py-4">201306</td>
-                <td class="px-6 py-4">15000</td>
-                <td class="px-6 py-4">sumant@gmail.com</td>
-                <td class="px-6 py-4">
-                  <span className="text-[#3872fa] font-[600]">
-                    dskjvbdhjvbevhbej
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <Badge status="delivered" />
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">2026-27-07</td>
-              </tr>
+              {ordersData?.data?.length !== 0 &&
+                ordersData?.data?.map((order, index) => {
+                  return (
+                    <>
+                      <tr class="bg-neutral-primary border-b border-default">
+                        <td class="px-6 py-4">
+                          <Button
+                            className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-[#f1f1f1]"
+                            onClick={() => isShowOrderedProduct(index)}
+                          >
+                            {isOpenOrderedProduct === index ? (
+                              <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
+                            ) : (
+                              <FaAngleUp className="text-[16px] text-[rgba(0,0,0,0.7)]" />
+                            )}
+                          </Button>
+                        </td>
+                        <td class="px-6 py-4">
+                          <span className="text-primary">{order?._id}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                          <span className="text-primary">
+                            {order?.paymentId
+                              ? order?.paymentId
+                              : "CASH ON DELIVERY"}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          {order?.userId?.name}
+                        </td>
+                        <td class="px-6 py-4">+{order?.userId?.mobile}</td>
+                        <td class="px-6 py-4">
+                          <span className="block w-[300px]">
+                            {order?.delivery_address?.address_line1 +
+                              " " +
+                              order?.delivery_address?.city +
+                              "," +
+                              order?.delivery_address?.landmark +
+                              "," +
+                              order?.delivery_address?.state +
+                              " , " +
+                              order?.delivery_address?.country +
+                              " , " +
+                              order?.delivery_address?.mobile}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4">
+                          {order?.delivery_address?.pincode}
+                        </td>
+                        <td class="px-6 py-4">{order?.totalAmt}</td>
+                        <td class="px-6 py-4">{order?.userId?.email}</td>
+                        <td class="px-6 py-4">
+                          <span className="text-primary">
+                            {order?.userId?._id}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4">
+                          <Badge status={order?.order_status} />
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          {order?.createdAt?.split("T")[0]}
+                        </td>
+                      </tr>
 
-              {isOpenOrderedProduct === 0 && (
-                <tr>
-                  <td className="pl-20" colSpan="6">
-                    <div class="relative overflow-x-auto bg-neutral-primary-soft shadow-xs rounded-base border border-default">
-                      <table class="w-full text-sm text-left rtl:text-right text-body">
-                        <thead class="text-sm text-body bg-neutral-secondary-soft border-b rounded-base border-default">
-                          <tr>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Product Id
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Product Title
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Image
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Quantity
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Price
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              SubTotal
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr class="bg-neutral-primary border-b border-default">
-                            <td class="px-6 py-4">
-                              <span className="text-gray-600">
-                                sc24evdfbfvwvb
-                              </span>
-                            </td>
-                            <td class="px-6 py-4">
-                              A-Line Kurti with Sharara & Du...
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                              <img
-                                src="/A-line Kurti.jpg"
-                                className="w-[40px] h-[40px] object-cover rounded-md"
-                              />
-                            </td>
-                            <td class="px-6 py-4">2</td>
-                            <td class="px-6 py-4">1200</td>
-                            <td class="px-6 py-4">1300</td>
-                          </tr>
-
-                          <tr class="bg-neutral-primary border-b border-default">
-                            <td class="px-6 py-4">
-                              <span className="text-gray-600">
-                                sc24evdfbfvwvb
-                              </span>
-                            </td>
-                            <td class="px-6 py-4">
-                              A-Line Kurti with Sharara & Du...
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                              <img
-                                src="/A-line Kurti.jpg"
-                                className="w-[40px] h-[40px] object-cover rounded-md"
-                              />
-                            </td>
-                            <td class="px-6 py-4">2</td>
-                            <td class="px-6 py-4">1200</td>
-                            <td class="px-6 py-4">1300</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </td>
-                </tr>
-              )}
-
-              <tr class="bg-neutral-primary border-b border-default">
-                <td class="px-6 py-4">
-                  <Button
-                    className="!w-[35px] !h-[35px] !min-w-[35px] !rounded-full !bg-[#f1f1f1]"
-                    onClick={() => isShowOrderedProduct(1)}
-                  >
-                    {isOpenOrderedProduct === 1 ? (
-                      <FaAngleUp className="text-[16px] text-[rgba(0,0,0,0.7)]" />
-                    ) : (
-                      <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
-                    )}
-                  </Button>
-                </td>
-                <td class="px-6 py-4">
-                  <span className="text-[#3872fa] font-[600]">
-                    sc24evdfbfvwvb
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <span className="text-[#3872fa] font-[600]">fefeewgew</span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">Sumant Kumar</td>
-                <td class="px-6 py-4">7037366838</td>
-                <td class="px-6 py-4">
-                  <span className="block w-[300px]">
-                    Shyam vatika colony, Surajpur Greater noida
-                  </span>
-                </td>
-                <td class="px-6 py-4">201306</td>
-                <td class="px-6 py-4">15000</td>
-                <td class="px-6 py-4">sumant@gmail.com</td>
-                <td class="px-6 py-4">
-                  <span className="text-[#3872fa] font-[600]">
-                    dskjvbdhjvbevhbej
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <Badge status="delivered" />
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">2026-27-07</td>
-              </tr>
-
-              {isOpenOrderedProduct === 1 && (
-                <tr>
-                  <td className="pl-20" colSpan="6">
-                    <div class="relative overflow-x-auto bg-neutral-primary-soft shadow-xs rounded-base border border-default">
-                      <table class="w-full text-sm text-left rtl:text-right text-body">
-                        <thead class="text-sm text-body bg-neutral-secondary-soft border-b rounded-base border-default">
-                          <tr>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Product Id
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Product Title
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Image
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Quantity
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              Price
-                            </th>
-                            <th
-                              scope="col"
-                              class="px-6 py-3 font-medium whitespace-nowrap"
-                            >
-                              SubTotal
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr class="bg-neutral-primary border-b border-default">
-                            <td class="px-6 py-4">
-                              <span className="text-gray-600">
-                                sc24evdfbfvwvb
-                              </span>
-                            </td>
-                            <td class="px-6 py-4">
-                              A-Line Kurti with Sharara & Du...
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                              <img
-                                src="/A-line Kurti.jpg"
-                                className="w-[40px] h-[40px] object-cover rounded-md"
-                              />
-                            </td>
-                            <td class="px-6 py-4">2</td>
-                            <td class="px-6 py-4">1200</td>
-                            <td class="px-6 py-4">1300</td>
-                          </tr>
-
-                          <tr class="bg-neutral-primary border-b border-default">
-                            <td class="px-6 py-4">
-                              <span className="text-gray-600">
-                                sc24evdfbfvwvb
-                              </span>
-                            </td>
-                            <td class="px-6 py-4">
-                              A-Line Kurti with Sharara & Du...
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                              <img
-                                src="/A-line Kurti.jpg"
-                                className="w-[40px] h-[40px] object-cover rounded-md"
-                              />
-                            </td>
-                            <td class="px-6 py-4">2</td>
-                            <td class="px-6 py-4">1200</td>
-                            <td class="px-6 py-4">1300</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </td>
-                </tr>
-              )}
+                      {isOpenOrderedProduct === index && (
+                        <tr>
+                          <td className="pl-20" colSpan="6">
+                            <div class="relative overflow-x-auto bg-neutral-primary-soft shadow-xs rounded-base border border-default">
+                              <table class="w-full text-sm text-left rtl:text-right text-body">
+                                <thead class="text-sm text-body bg-neutral-secondary-soft border-b rounded-base border-default">
+                                  <tr>
+                                    <th
+                                      scope="col"
+                                      class="px-6 py-3 font-medium whitespace-nowrap"
+                                    >
+                                      Product Id
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      class="px-6 py-3 font-medium whitespace-nowrap"
+                                    >
+                                      Product Title
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      class="px-6 py-3 font-medium whitespace-nowrap"
+                                    >
+                                      Image
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      class="px-6 py-3 font-medium whitespace-nowrap"
+                                    >
+                                      Quantity
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      class="px-6 py-3 font-medium whitespace-nowrap"
+                                    >
+                                      Price
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      class="px-6 py-3 font-medium whitespace-nowrap"
+                                    >
+                                      SubTotal
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {order?.products?.map((item, index) => {
+                                    return (
+                                      <tr class="bg-neutral-primary border-b border-default">
+                                        <td class="px-6 py-4">
+                                          <span className="text-gray-600">
+                                            {item?._id}
+                                          </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                          <div className="w-[200px]">
+                                            {item?.productTitle}
+                                          </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                          <img
+                                            src={item?.image}
+                                            className="w-[60px] h-[80px] object-cover rounded-md"
+                                          />
+                                        </td>
+                                        <td class="px-6 py-4">
+                                          {item?.quantity}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                          {item?.price?.toLocaleString(
+                                            "en-US",
+                                            {
+                                              style: "currency",
+                                              currency: "INR",
+                                            },
+                                          )}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                          {item?.subTotal?.toLocaleString(
+                                            "en-US",
+                                            {
+                                              style: "currency",
+                                              currency: "INR",
+                                            },
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
             </tbody>
           </table>
         </div>
+        {ordersData?.totalPages > 1 && (
+          <div className="flex items-center justify-center mt-10 pb-5">
+            <Pagination
+              showFirstButton
+              showLastButton
+              count={ordersData?.totalPages}
+              page={pageOrder}
+              onChange={(e, value) => setPageOrder(value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="card my-4 shadow-md sm:rounded-lg bg-white">
         <div className="flex items-center justify-between px-5 py-5 pb-0">
-          <h2 className="text-[18px] font-[600]">Total Users & Total Sales</h2>
+          <h2 className="text-[18px] font-[600]">
+            {chartType === "users" ? "Total Users Analytics" : "Total Sales Analytics"}
+          </h2>
         </div>
 
         <div className="flex items-center px-5 py-5 pt-1 gap-5">
-          <span className="flex items-center gap-1 text-[15px]">
-            <span className="block w-[8px] h-[8px] rounded-full bg-green-600"></span>
+          <span
+            className={`flex items-center gap-2 text-[15px] cursor-pointer font-[500] px-3 py-1.5 rounded-md transition-all ${
+              chartType === "users"
+                ? "bg-green-100 text-green-700 font-bold border border-green-300"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+            onClick={() => setChartType("users")}
+          >
+            <span className="block w-[10px] h-[10px] rounded-full bg-green-600"></span>
             Total Users
           </span>
 
-          <span className="flex items-center gap-1 text-[15px]">
-            <span className="block w-[8px] h-[8px] rounded-full bg-primary"></span>
+          <span
+            className={`flex items-center gap-2 text-[15px] cursor-pointer font-[500] px-3 py-1.5 rounded-md transition-all ${
+              chartType === "sales"
+                ? "bg-blue-100 text-blue-700 font-bold border border-blue-300"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+            onClick={() => setChartType("sales")}
+          >
+            <span className="block w-[10px] h-[10px] rounded-full bg-blue-600"></span>
             Total Sales
           </span>
         </div>
 
-        <LineChart
-          width={1000}
-          maxWidth={500}
-          height={500}
-          data={chart1Data}
-          margin={{
-            top: 5,
-            right: 30,
-            left: 20,
-            bottom: 5,
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="none" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} />
-          <Tooltip />
-          <Legend />
-          <Line
-            type="monotone"
-            dataKey="TotalSales"
-            stroke="#8884d8"
-            strokeWidth={3}
-            activeDot={{ r: 8 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="TotalUsers"
-            stroke="#82ca9d"
-            strokeWidth={3}
-          />
-        </LineChart>
+        {chartType === "users" ? (
+          <BarChart
+            width={1000}
+            height={500}
+            data={monthlyUsersData?.length > 0 ? monthlyUsersData : chart1Data}
+            margin={{
+              top: 10,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="TotalUsers" fill="#10b981" name="Total Users" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        ) : (
+          <BarChart
+            width={1000}
+            height={500}
+            data={monthlySalesData?.length > 0 ? monthlySalesData : chart1Data}
+            margin={{
+              top: 10,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="totalSales" fill="#3872fa" name="Total Sales" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        )}
       </div>
     </>
   );

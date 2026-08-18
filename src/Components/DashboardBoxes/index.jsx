@@ -1,18 +1,17 @@
 import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import 'swiper/css/navigation';
+import "swiper/css/navigation";
 
-import { Navigation } from 'swiper/modules';
+import { Navigation } from "swiper/modules";
 import { LuGift } from "react-icons/lu";
 import { IoStatsChartSharp } from "react-icons/io5";
 import { AiTwotonePieChart } from "react-icons/ai";
 import { BsBank } from "react-icons/bs";
 import { RiProductHuntLine } from "react-icons/ri";
+import { BiCategory } from "react-icons/bi";
 
-
-
-const DashboardBoxes = () => {
+const DashboardBoxes = (props) => {
   return (
     <>
       <Swiper
@@ -23,51 +22,59 @@ const DashboardBoxes = () => {
         className="dashboardBoxesSlider"
       >
         <SwiperSlide>
-            <div className="box p-5 cursor-pointer bg-white hover:bg-[#fafafa] rounded-md border border-[rgba(0,0,0,0.1)] 
-            flex items-center gap-4">
-                <LuGift className="text-[40px] text-[#3872fa]" />
-                <div className="info w-[70%]">
-                    <h3>New Orders</h3>
-                    <b>1390</b>
-                </div>
-                <IoStatsChartSharp className="text-[50px] text-[#3872fa]" />
+          <div
+            className="box bg-[#10b981] p-5 py-6 cursor-pointer hover:bg-[#289974] rounded-md border
+            border-[rgba(0,0,0,0.1)] flex items-center gap-4"
+          >
+            <AiTwotonePieChart className="text-[50px] text-[#fff]" />
+            <div className="info w-[70%]">
+              <h3 className="text-white">Total Users</h3>
+              <b className="text-white text-[20px]">{props?.users || 0}</b>
             </div>
+            <IoStatsChartSharp className="text-[50px] text-[#fff]" />
+          </div>
         </SwiperSlide>
 
         <SwiperSlide>
-            <div className="box p-5 cursor-pointer bg-white hover:bg-[#fafafa] rounded-md border border-[rgba(0,0,0,0.1)] 
-            flex items-center gap-4">
-                <AiTwotonePieChart className="text-[40px] text-[#10b981]" />
-                <div className="info w-[70%]">
-                    <h3>Sales</h3>
-                    <b>1390</b>
-                </div>
-                <IoStatsChartSharp className="text-[50px] text-[#10b981]" />
+          <div
+            className="box bg-[#3872fa] p-5 py-6 cursor-pointer hover:bg-[#346ae8] rounded-md border
+            border-[rgba(0,0,0,0.1)] flex items-center gap-4"
+          >
+            <LuGift className="text-[40px] text-[#fff]" />
+            <div className="info w-[70%]">
+              <h3 className="text-white">Total Orders</h3>
+              <b className="text-white text-[20px]">{props?.orders || 0}</b>
             </div>
+            <AiTwotonePieChart className="text-[50px] text-[#fff]" />
+          </div>
         </SwiperSlide>
 
         <SwiperSlide>
-            <div className="box p-5 cursor-pointer bg-white hover:bg-[#fafafa] rounded-md border border-[rgba(0,0,0,0.1)] 
-            flex items-center gap-4">
-                <BsBank className="text-[30px] text-[#7928ca]" />
-                <div className="info w-[70%]">
-                    <h3>Revenue</h3>
-                    <b>1390</b>
-                </div>
-                <IoStatsChartSharp className="text-[50px] text-[#7928ca]" />
+          <div
+            className="box bg-[#312be1d8] p-5 py-6 cursor-pointer hover:bg-[#423eadd8] rounded-md border
+            border-[rgba(0,0,0,0.1)] flex items-center gap-4"
+          >
+            <RiProductHuntLine className="text-[40px] text-[#fff]" />
+            <div className="info w-[70%]">
+              <h3 className="text-white">Total Products</h3>
+              <b className="text-white text-[20px]">{props?.products || 0}</b>
             </div>
+            <IoStatsChartSharp className="text-[50px] text-[#fff]" />
+          </div>
         </SwiperSlide>
 
         <SwiperSlide>
-            <div className="box p-5 cursor-pointer bg-white hover:bg-[#fafafa] rounded-md border border-[rgba(0,0,0,0.1)] 
-            flex items-center gap-4">
-                <RiProductHuntLine className="text-[40px] text-[#312be1d8]" />
-                <div className="info w-[70%]">
-                    <h3>Products</h3>
-                    <b>1390</b>
-                </div>
-                <IoStatsChartSharp className="text-[50px] text-[#312be1d8]" />
+          <div
+            className="box bg-[#e11d48] p-5 py-6 cursor-pointer hover:bg-[#be123c] rounded-md border
+            border-[rgba(0,0,0,0.1)] flex items-center gap-4"
+          >
+            <BiCategory className="text-[40px] text-[#fff]" />
+            <div className="info w-[70%]">
+              <h3 className="text-white">Total Categories</h3>
+              <b className="text-white text-[20px]">{props?.categories || 0}</b>
             </div>
+            <AiTwotonePieChart className="text-[50px] text-[#fff]" />
+          </div>
         </SwiperSlide>
       </Swiper>
     </>
@@ -75,3 +82,4 @@ const DashboardBoxes = () => {
 };
 
 export default DashboardBoxes;
+

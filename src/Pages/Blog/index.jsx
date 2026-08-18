@@ -13,9 +13,9 @@ import { GoTrash } from "react-icons/go";
 import { MyContext } from "../../App";
 import {
   deleteData,
-  deleteMultipleData,
   fetchDataFromApi,
 } from "../../utils/api";
+import SearchBox from "../../Components/SearchBox";
 
 const columns = [
   { id: "image", label: "IMAGE", minWidth: 100 },
@@ -27,9 +27,9 @@ const columns = [
 const BlogList = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
   const [blogData, setBlogData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const context = useContext(MyContext);
 
@@ -41,7 +41,7 @@ const BlogList = () => {
     setIsLoading(true);
     fetchDataFromApi("/api/blog").then((res) => {
       setTimeout(() => {
-        setBlogData(res?.blogs);
+        setBlogData(res?.blogs || []);
         setIsLoading(false);
       }, 300);
     });
@@ -52,7 +52,7 @@ const BlogList = () => {
   };
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(event.target.value);
+    setRowsPerPage(+event.target.value);
     setPage(0);
   };
 
@@ -62,6 +62,13 @@ const BlogList = () => {
       getBlogs();
     });
   };
+
+  // Automatic real-time search filter for blogs
+  const filteredBlogs = blogData?.filter(
+    (item) =>
+      item?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item?.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
@@ -84,6 +91,15 @@ const BlogList = () => {
       </div>
 
       <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white">
+        <div className="flex items-center w-full px-5 justify-between pb-3">
+          <div className="col w-[40%]">
+            <h2 className="text-[18px] font-[600]">Blogs</h2>
+          </div>
+          <div className="col w-[35%] ml-auto">
+            <SearchBox setSeachQuery={setSearchQuery} placeholder="Search blogs..." />
+          </div>
+        </div>
+
         <TableContainer sx={{ maxHeight: 440 }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
@@ -100,69 +116,81 @@ const BlogList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {blogData?.length !== 0 &&
-                blogData?.map((item, index) => {
-                  return (
-                    <TableRow key={index}>
-                      <TableCell width={300}>
-                        <div className="flex items-center gap-4 w-[300px]">
-                          <div className="img w-full rounded-md overflow-hidden group">
-                            <img
-                              src={item?.images[0]}
-                              className="w-full group-hover:scale-105 transition-all"
-                            />
+              {filteredBlogs?.length > 0 ? (
+                filteredBlogs
+                  ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  ?.map((item, index) => {
+                    return (
+                      <TableRow key={item._id || index}>
+                        <TableCell width={300}>
+                          <div className="flex items-center gap-4 w-[300px]">
+                            <div className="img w-full rounded-md overflow-hidden group">
+                              <img
+                                src={item?.images?.[0]}
+                                alt={item?.title}
+                                className="w-full group-hover:scale-105 transition-all"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell width={200}>
-                        <span className="text-[15px] font-[500]">
-                          {item?.title}
-                        </span>
-                      </TableCell>
+                        </TableCell>
+                        <TableCell width={200}>
+                          <span className="text-[15px] font-[500]">
+                            {item?.title}
+                          </span>
+                        </TableCell>
 
-                      <TableCell width={300}>
-                        <div
-                          dangerouslySetInnerHTML={{
-                            __html: item?.description?.substr(0, 150) + "...",
-                          }}
-                        ></div>
-                      </TableCell>
+                        <TableCell width={300}>
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: item?.description
+                                ? item.description.substr(0, 150) + "..."
+                                : "",
+                            }}
+                          ></div>
+                        </TableCell>
 
-                      <TableCell width={100}>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
-                          !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
-                            onClick={() =>
-                              context.setIsOpenFullScreenPanel({
-                                open: true,
-                                model: "Edit Blog",
-                                id: item?._id,
-                              })
-                            }
-                          >
-                            <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                          </Button>
+                        <TableCell width={100}>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
+                            !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
+                              onClick={() =>
+                                context.setIsOpenFullScreenPanel({
+                                  open: true,
+                                  model: "Edit Blog",
+                                  id: item?._id,
+                                })
+                              }
+                            >
+                              <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
+                            </Button>
 
-                          <Button
-                            className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
-                          !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
-                            onClick={() => deleteBlog(item?._id)}
-                          >
-                            <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                            <Button
+                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
+                            !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
+                              onClick={() => deleteBlog(item?._id)}
+                            >
+                              <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    No blogs found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
           component="div"
-          count={10}
+          count={filteredBlogs?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

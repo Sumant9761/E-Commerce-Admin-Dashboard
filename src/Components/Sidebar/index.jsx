@@ -1,6 +1,6 @@
 import { Button } from "@mui/material";
 import React, { useContext, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MdOutlineDashboard } from "react-icons/md";
 import { FaRegImage } from "react-icons/fa";
 import { FiUsers } from "react-icons/fi";
@@ -12,9 +12,13 @@ import { TbMessage } from "react-icons/tb";
 import { FaAngleDown } from "react-icons/fa";
 import { Collapse } from "react-collapse";
 import { MyContext } from "../../App";
+import { fetchDataFromApi } from "../../utils/api";
 
 const Sidebar = () => {
   const [submenuIndex, setSubmenuIndex] = useState(null);
+  const context = useContext(MyContext);
+  const history = useNavigate();
+
   const isOpenSubMenu = (index) => {
     if (submenuIndex === index) {
       setSubmenuIndex(null);
@@ -23,12 +27,28 @@ const Sidebar = () => {
     }
   };
 
-  const context = useContext(MyContext);
+  const logout = () => {
+    fetchDataFromApi(
+      `/api/user/logout?token=${localStorage.getItem("accessToken")}`,
+      { withCredentials: true }
+    )
+      .then(() => {
+        context?.setIsLogin(false);
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        history("/login");
+      })
+      .catch(() => {
+        context?.setIsLogin(false);
+        localStorage.clear();
+        history("/login");
+      });
+  };
 
   return (
     <div
-      className={`sidebar fixed top-0 left-0 z-[50] bg-[#fff] h-full border-r border-[rgba(0,0,0,0.1)]
-       py-2 px-4 ${context.isSidebarOpen === true ? "w-[16%]" : "w-0"}`}
+      className={`sidebar fixed top-0 left-0 z-[50] bg-[#fff] h-screen overflow-y-auto overflow-x-hidden border-r border-[rgba(0,0,0,0.1)]
+       py-2 px-4 pb-12 transition-all ${context.isSidebarOpen === true ? "w-[16%]" : "w-0"}`}
     >
       <div className="py-2 w-full">
         <Link to="/">
@@ -357,7 +377,10 @@ const Sidebar = () => {
         </li>
 
         <li>
-          <Button className="w-full !capitalize !justify-start !mt-4 gap-2 !text-[14px] !text-[rgba(0,0,0,0.8)] !font-[500] items-center !py-2 hover:!bg-[#f1f1f1]">
+          <Button
+            className="w-full !capitalize !justify-start !mt-4 gap-2 !text-[14px] !text-[rgba(0,0,0,0.8)] !font-[500] items-center !py-2 hover:!bg-[#f1f1f1]"
+            onClick={logout}
+          >
             <MdLogout className="text-[20px]" />
             <span>Logout</span>
           </Button>

@@ -13,7 +13,6 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import Checkbox from "@mui/material/Checkbox";
 import { Link } from "react-router-dom";
-import Progress from "../../Components/ProgressBar";
 import { AiOutlineEdit } from "react-icons/ai";
 import { FaRegEye } from "react-icons/fa";
 import { GoTrash } from "react-icons/go";
@@ -46,6 +45,7 @@ const Products = () => {
   const [productData, setProductData] = useState([]);
   const [sortedIds, setSortedIds] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [productCat, setProductCat] = useState("");
   const [productSubCat, setProductSubCat] = useState("");
@@ -69,17 +69,14 @@ const Products = () => {
   const handleSelectAll = (e) => {
     const isChecked = e.target.checked;
 
-    //Update all items' checked status
     const updatedItems = productData.map((item) => ({
       ...item,
       checked: isChecked,
     }));
     setProductData(updatedItems);
 
-    //Update the sorted IDs state
-
     if (isChecked) {
-      const ids = updatedItems.map((item) => item._id).sort((a, b) => a - b);
+      const ids = updatedItems.map((item) => item._id);
       setSortedIds(ids);
     } else {
       setSortedIds([]);
@@ -87,17 +84,15 @@ const Products = () => {
   };
 
   // Handler to toggle individual checkboxes
-  const handleCheckboxChange = (e, id, index) => {
+  const handleCheckboxChange = (e, id) => {
     const updatedItems = productData.map((item) =>
       item._id === id ? { ...item, checked: !item.checked } : item,
     );
     setProductData(updatedItems);
 
-    // Update the sorted IDs state
     const selectedIds = updatedItems
       .filter((item) => item.checked)
-      .map((item) => item._id)
-      .sort((a, b) => a - b);
+      .map((item) => item._id);
     setSortedIds(selectedIds);
   };
 
@@ -198,9 +193,19 @@ const Products = () => {
   };
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(event.target.value);
+    setRowsPerPage(+event.target.value);
     setPage(0);
   };
+
+  // Real-time automatic filter for products
+  const filteredProducts = productData.filter(
+    (item) =>
+      item?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item?.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item?.catName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item?.subCat?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item?.price && String(item.price).includes(searchQuery))
+  );
 
   return (
     <>
@@ -252,7 +257,7 @@ const Products = () => {
                 onChange={handleChangeProductCat}
               >
                 {context?.catData?.map((cat, index) => {
-                  return <MenuItem value={cat?._id}>{cat?.name}</MenuItem>;
+                  return <MenuItem value={cat?._id} key={index}>{cat?.name}</MenuItem>;
                 })}
               </Select>
             )}
@@ -271,12 +276,12 @@ const Products = () => {
                 label="Sub Category"
                 onChange={handleChangeProductSubCat}
               >
-                {context?.catData?.map((cat, index) => {
+                {context?.catData?.map((cat) => {
                   return (
                     cat?.children?.length !== 0 &&
                     cat?.children?.map((subCat, index_) => {
                       return (
-                        <MenuItem value={subCat?._id}>{subCat?.name}</MenuItem>
+                        <MenuItem value={subCat?._id} key={index_}>{subCat?.name}</MenuItem>
                       );
                     })
                   );
@@ -285,10 +290,8 @@ const Products = () => {
             )}
           </div>
 
-          <div className="col w-[18%]">
-            <h4 className="font-[600] text-[14px] mb-2">
-              Third Level Category By
-            </h4>
+          <div className="col w-[15%]">
+            <h4 className="font-[600] text-[14px] mb-2">3rd Level Category By</h4>
             {context?.catData?.length !== 0 && (
               <Select
                 style={{ zoom: "80%" }}
@@ -297,7 +300,7 @@ const Products = () => {
                 size="small"
                 className="w-full"
                 value={productThirdLevelSubCat}
-                label="Sub Category"
+                label="3rd Level Category"
                 onChange={handleChangeProductThirdLevelSubCat}
               >
                 {context?.catData?.map((cat) => {
@@ -322,7 +325,7 @@ const Products = () => {
           </div>
 
           <div className="col w-[20%] ml-auto">
-            <SearchBox />
+            <SearchBox setSeachQuery={setSearchQuery} placeholder="Search products..." />
           </div>
         </div>
 
@@ -338,8 +341,8 @@ const Products = () => {
                     size="small"
                     onChange={handleSelectAll}
                     checked={
-                      productData?.length > 0
-                        ? productData.every((item) => item.checked)
+                      filteredProducts?.length > 0
+                        ? filteredProducts.every((item) => item.checked)
                         : false
                     }
                   />
@@ -357,131 +360,135 @@ const Products = () => {
             </TableHead>
             <TableBody>
               {isLoading === false ? (
-                productData?.length !== 0 &&
-                productData
-                  ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  ?.reverse()
-                  ?.map((product, index) => {
-                    return (
-                      <TableRow key={index}>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          <Checkbox
-                            {...label}
-                            size="small"
-                            checked={product.checked === true ? true : false}
-                            onChange={(e) =>
-                              handleCheckboxChange(e, product._id, index)
-                            }
-                          />
-                        </TableCell>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          <div className="flex items-center gap-4 w-[300px]">
-                            <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
-                              <Link
-                                to={`/product/${product?._id}`}
-                                data-discover="true"
-                              >
-                                <LazyLoadImage
-                                  alt={"image"}
-                                  effect="blur"
-                                  className="w-full group-hover:scale-105 transition-all"
-                                  src={product?.images[0]}
-                                />
-                              </Link>
-                            </div>
-
-                            <div className="info w-[75%]">
-                              <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
-                                <Link to={`/product/${product?._id}`}>
-                                  {product?.name}
+                filteredProducts?.length !== 0 ? (
+                  filteredProducts
+                    ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    ?.map((product, index) => {
+                      return (
+                        <TableRow key={product._id || index}>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            <Checkbox
+                              {...label}
+                              size="small"
+                              checked={product.checked === true}
+                              onChange={(e) =>
+                                handleCheckboxChange(e, product._id)
+                              }
+                            />
+                          </TableCell>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            <div className="flex items-center gap-4 w-[300px]">
+                              <div className="img w-[65px] h-[65px] rounded-md overflow-hidden group">
+                                <Link
+                                  to={`/product/${product?._id}`}
+                                  data-discover="true"
+                                >
+                                  <LazyLoadImage
+                                    alt={"image"}
+                                    effect="blur"
+                                    className="w-full group-hover:scale-105 transition-all"
+                                    src={product?.images?.[0]}
+                                  />
                                 </Link>
-                              </h3>
+                              </div>
 
-                              <span className="text-[12px]">
-                                {product?.brand}
+                              <div className="info w-[75%]">
+                                <h3 className="font-[600] text-[12px] leading-4 hover:text-primary">
+                                  <Link to={`/product/${product?._id}`}>
+                                    {product?.name}
+                                  </Link>
+                                </h3>
+
+                                <span className="text-[12px]">
+                                  {product?.brand}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            {product?.catName}
+                          </TableCell>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            {product?.subCat}
+                          </TableCell>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            <div className="flex gap-1 flex-col">
+                              <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
+                                &#x20b9; {product?.price}
+                              </span>
+                              <span className="price text-[14px] font-[600] text-primary">
+                                &#x20b9; {product?.oldPrice}
                               </span>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          {product?.catName}
-                        </TableCell>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          {product?.subCat}
-                        </TableCell>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          <div className="flex gap-1 flex-col">
-                            <span className="oldPrice line-through leading-3 text-gray-500 text-[14px] font-[500]">
-                              &#x20b9; {product?.price}
-                            </span>
-                            <span className="price text-[14px] font-[600] text-primary">
-                              &#x20b9; {product?.oldPrice}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          <p className="text-[14px]">
-                            <span className="font-[600]">{product?.sale}</span>{" "}
-                            sale
-                          </p>
-                        </TableCell>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          <p className="text-[14px]">
-                            <Rating
-                              name="half-rating"
-                              defaultValue={product?.rating}
-                              size="small"
-                              readOnly
-                            />
-                          </p>
-                        </TableCell>
-                        <TableCell style={{ minWidth: columns.minWidth }}>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
-                          !rounded-full hover:!bg-[#ccc]"
-                              onClick={() =>
-                                context.setIsOpenFullScreenPanel({
-                                  open: true,
-                                  model: "Edit Product",
-                                  id: product?._id,
-                                })
-                              }
-                            >
-                              <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                            </Button>
-
-                            <Link to={`/product/${product?._id}`}>
+                          </TableCell>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            <p className="text-[14px]">
+                              <span className="font-[600]">{product?.sale}</span>{" "}
+                              sale
+                            </p>
+                          </TableCell>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            <p className="text-[14px]">
+                              <Rating
+                                name="half-rating"
+                                defaultValue={product?.rating}
+                                size="small"
+                                readOnly
+                              />
+                            </p>
+                          </TableCell>
+                          <TableCell style={{ minWidth: columns.minWidth }}>
+                            <div className="flex items-center gap-1">
                               <Button
                                 className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
-                          !rounded-full hover:!bg-[#ccc]"
+                            !rounded-full hover:!bg-[#ccc]"
+                                onClick={() =>
+                                  context.setIsOpenFullScreenPanel({
+                                    open: true,
+                                    model: "Edit Product",
+                                    id: product?._id,
+                                  })
+                                }
                               >
-                                <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                                <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
                               </Button>
-                            </Link>
 
-                            <Button
-                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
-                          !rounded-full hover:!bg-[#ccc]"
-                              onClick={() => deleteProduct(product?._id)}
-                            >
-                              <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-              ) : (
-                <>
+                              <Link to={`/product/${product?._id}`}>
+                                <Button
+                                  className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
+                            !rounded-full hover:!bg-[#ccc]"
+                                >
+                                  <FaRegEye className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                                </Button>
+                              </Link>
+
+                              <Button
+                                className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border !border-[rgba(0,0,0,0.4)] 
+                            !rounded-full hover:!bg-[#ccc]"
+                                onClick={() => deleteProduct(product?._id)}
+                              >
+                                <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                ) : (
                   <TableRow>
-                    <TableCell colSpan={8}>
-                      <div className="flex items-center justify-center w-full min-h-[400px]">
-                        <CircularProgress color="inherit" />
-                      </div>
+                    <TableCell colSpan={8} align="center">
+                      No products found.
                     </TableCell>
                   </TableRow>
-                </>
+                )
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8}>
+                    <div className="flex items-center justify-center w-full min-h-[400px]">
+                      <CircularProgress color="inherit" />
+                    </div>
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
@@ -489,7 +496,7 @@ const Products = () => {
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
           component="div"
-          count={productData?.length}
+          count={filteredProducts?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

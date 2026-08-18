@@ -77,3 +77,14 @@ color: #000 !important;}
 .contentRight{padding-top: 80px !important;}
 
 .rsw-editor{min-height: 200px !important; background: #fff !important;}
+
+.sidebar::-webkit-scrollbar {
+  width: 5px !important;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}

@@ -15,7 +15,7 @@ import { MyContext } from "../../App";
 import { deleteData, fetchDataFromApi } from "../../utils/api";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
-
+import SearchBox from "../../Components/SearchBox";
 
 const columns = [
   { id: "image", label: "IMAGE", minWidth: 150 },
@@ -26,7 +26,7 @@ const columns = [
 const CategoryList = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [categoryFilterVal, setCategoryFilterVal] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const context = useContext(MyContext);
 
@@ -35,10 +35,6 @@ const CategoryList = () => {
       context?.setCatData(res?.data);
     });
   }, [context?.isOpenFullScreenPanel]);
-
-  const handleChangeCatFilter = (event) => {
-    setCategoryFilterVal(event.target.value);
-  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -57,13 +53,15 @@ const CategoryList = () => {
     });
   };
 
+  // Automatic real-time search filter for categories
+  const filteredCategories = context?.catData?.filter((item) =>
+    item?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <>
       <div className="flex items-center justify-between px-2 py-0 mt-3">
-        <h2 className="text-[18px] font-[600]">
-          Category List{" "}
-          <span className="font-[400] text-[14px]">(Material UI Table)</span>
-        </h2>
+        <h2 className="text-[18px] font-[600]">Category List</h2>
 
         <div className="col w-[25%] ml-auto flex items-center justify-end gap-3">
           <Button className="btn !bg-green-600 !text-white btn-sm">
@@ -84,6 +82,15 @@ const CategoryList = () => {
       </div>
 
       <div className="card my-4 pt-5 shadow-md sm:rounded-lg bg-white">
+        <div className="flex items-center w-full px-5 justify-between pb-3">
+          <div className="col w-[40%]">
+            <h2 className="text-[18px] font-[600]">Categories</h2>
+          </div>
+          <div className="col w-[35%] ml-auto">
+            <SearchBox setSeachQuery={setSearchQuery} placeholder="Search categories..." />
+          </div>
+        </div>
+
         <TableContainer sx={{ maxHeight: 440 }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
@@ -100,60 +107,69 @@ const CategoryList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {context?.catData?.length !== 0 &&
-                context?.catData?.map((item, index) => {
-                  return (
-                    <TableRow key={index}>
-                      <TableCell width={100}>
-                        <div className="flex items-center gap-4 w-[50px]">
-                          <div className="img w-full rounded-md overflow-hidden group">
-                            <Link to="/products/4575" data-discover="true">
-                              <LazyLoadImage
-                                alt={"image"}
-                                effect="blur"
-                                className="w-full group-hover:scale-105 transition-all"
-                                src={item.images[0]}
-                              />
-                            </Link>
+              {filteredCategories?.length > 0 ? (
+                filteredCategories
+                  ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  ?.map((item, index) => {
+                    return (
+                      <TableRow key={item._id || index}>
+                        <TableCell width={100}>
+                          <div className="flex items-center gap-4 w-[50px]">
+                            <div className="img w-full rounded-md overflow-hidden group">
+                              <Link to="/products/4575" data-discover="true">
+                                <LazyLoadImage
+                                  alt={"image"}
+                                  effect="blur"
+                                  className="w-full group-hover:scale-105 transition-all"
+                                  src={item?.images?.[0]}
+                                />
+                              </Link>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell width={100}>{item?.name}</TableCell>
-                      <TableCell width={100}>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
-                          !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
-                            onClick={() =>
-                              context.setIsOpenFullScreenPanel({
-                                open: true,
-                                model: "Edit Category",
-                                id: item?._id,
-                              })
-                            }
-                          >
-                            <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
-                          </Button>
+                        </TableCell>
+                        <TableCell width={100}>{item?.name}</TableCell>
+                        <TableCell width={100}>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
+                            !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
+                              onClick={() =>
+                                context.setIsOpenFullScreenPanel({
+                                  open: true,
+                                  model: "Edit Category",
+                                  id: item?._id,
+                                })
+                              }
+                            >
+                              <AiOutlineEdit className="text-[rgba(0,0,0,0.7)] text-[20px]" />
+                            </Button>
 
-                          <Button
-                            className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
-                          !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
-                            onClick={() => deleteCat(item?._id)}
-                          >
-                            <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                            <Button
+                              className="!w-[35px] !h-[35px] !min-w-[35px] bg-[#f1f1f1] !border 
+                            !border-[rgba(0,0,0,0.4)] !rounded-full hover:!bg-[#ccc]"
+                              onClick={() => deleteCat(item?._id)}
+                            >
+                              <GoTrash className="text-[rgba(0,0,0,0.7)] text-[18px]" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    No categories found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
           component="div"
-          count={10}
+          count={filteredCategories?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
